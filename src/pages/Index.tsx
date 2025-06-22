@@ -13,6 +13,7 @@ interface Download {
   title: string;
   platform: string;
   type: 'video' | 'audio';
+  quality?: string;
   timestamp: Date;
   thumbnail?: string;
 }
@@ -43,14 +44,26 @@ const Index = () => {
     }
   }, [isDark]);
 
-  const handleDownload = (url: string, type: 'video' | 'audio') => {
+  const handleDownload = (url: string, type: 'video' | 'audio', quality?: string) => {
+    // Detect content type for better naming
+    const getContentType = (url: string) => {
+      if (/instagram\.com\/reel/i.test(url)) return 'Instagram Reel';
+      if (/instagram\.com\/p\//i.test(url)) return 'Instagram Post';
+      if (/tiktok\.com/i.test(url)) return 'TikTok Video';
+      if (/youtube\.com\/shorts/i.test(url)) return 'YouTube Short';
+      return `${detectPlatform(url) || 'Video'} content`;
+    };
+
+    const contentType = getContentType(url);
+    
     // Simulate download process
     const newDownload: Download = {
       id: Date.now().toString(),
       url,
-      title: `Downloaded ${type} from ${detectPlatform(url) || 'unknown platform'}`,
+      title: `Downloaded ${type} from ${contentType}${quality ? ` (${quality})` : ''}`,
       platform: detectPlatform(url) || 'unknown',
       type,
+      quality,
       timestamp: new Date(),
     };
 
@@ -62,7 +75,7 @@ const Index = () => {
 
     toast({
       title: "Download started!",
-      description: `Your ${type} download will begin shortly.`,
+      description: `Your ${type} download${quality ? ` in ${quality}` : ''} will begin shortly.`,
     });
   };
 
@@ -118,7 +131,7 @@ const Index = () => {
             Download Videos & MP3s
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-            Fast, free, and secure downloads from YouTube, Instagram, TikTok, Facebook, X and more
+            Fast, free, and secure downloads from YouTube, Instagram Reels, TikTok, Facebook, X and more
           </p>
           
           {/* Features */}

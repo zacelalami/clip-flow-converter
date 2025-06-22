@@ -5,17 +5,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 
 interface DownloadFormProps {
-  onDownload: (url: string, type: 'video' | 'audio') => void;
+  onDownload: (url: string, type: 'video' | 'audio', quality?: string) => void;
 }
 
 const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
   const [url, setUrl] = useState('');
   const [downloadType, setDownloadType] = useState<'video' | 'audio'>('video');
+  const [videoQuality, setVideoQuality] = useState('720p');
+  const [audioQuality, setAudioQuality] = useState('320kbps');
   const [isDragOver, setIsDragOver] = useState(false);
   const [detectedPlatform, setDetectedPlatform] = useState<string | null>(null);
+  const [detectedContentType, setDetectedContentType] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -28,6 +32,19 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
       twitter: /twitter\.com|x\.com/i,
       twitch: /twitch\.tv/i,
     };
+
+    // Detect specific content types
+    if (/instagram\.com\/reel/i.test(url)) {
+      setDetectedContentType('Instagram Reel');
+    } else if (/instagram\.com\/p\//i.test(url)) {
+      setDetectedContentType('Instagram Post');
+    } else if (/tiktok\.com/i.test(url)) {
+      setDetectedContentType('TikTok Video');
+    } else if (/youtube\.com\/shorts/i.test(url)) {
+      setDetectedContentType('YouTube Short');
+    } else {
+      setDetectedContentType(null);
+    }
 
     for (const [platform, regex] of Object.entries(platforms)) {
       if (regex.test(url)) {
@@ -76,7 +93,9 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
       });
       return;
     }
-    onDownload(url, downloadType);
+
+    const quality = downloadType === 'video' ? videoQuality : audioQuality;
+    onDownload(url, downloadType, quality);
   };
 
   const platformColors = {
@@ -106,8 +125,21 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
           <div className="text-center space-y-2">
             <h2 className="text-2xl font-semibold">Download Videos</h2>
             <p className="text-muted-foreground">
-              Download videos from YouTube, Instagram, TikTok, Facebook, X and more
+              Download videos from YouTube, Instagram Reels, TikTok, Facebook, X and more
             </p>
+          </div>
+          <div className="flex justify-center">
+            <Select value={videoQuality} onValueChange={setVideoQuality}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Select video quality" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1080p">1080p (Full HD)</SelectItem>
+                <SelectItem value="720p">720p (HD)</SelectItem>
+                <SelectItem value="480p">480p (SD)</SelectItem>
+                <SelectItem value="360p">360p</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </TabsContent>
 
@@ -115,8 +147,21 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
           <div className="text-center space-y-2">
             <h2 className="text-2xl font-semibold">Download MP3s</h2>
             <p className="text-muted-foreground">
-              Extract audio and download as MP3 from any video platform
+              Extract high-quality audio and download as MP3 from any video platform
             </p>
+          </div>
+          <div className="flex justify-center">
+            <Select value={audioQuality} onValueChange={setAudioQuality}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Select audio quality" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="320kbps">320kbps (High Quality)</SelectItem>
+                <SelectItem value="256kbps">256kbps</SelectItem>
+                <SelectItem value="192kbps">192kbps</SelectItem>
+                <SelectItem value="128kbps">128kbps</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </TabsContent>
       </Tabs>
@@ -134,7 +179,7 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
             <Link className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
             <Input
               type="url"
-              placeholder="Paste any video URL here or drag and drop..."
+              placeholder="Paste any video URL here (Instagram Reels, TikTok, YouTube, etc.) or drag and drop..."
               value={url}
               onChange={(e) => handleUrlChange(e.target.value)}
               className="pl-12 pr-12 h-14 text-lg rounded-2xl border-2 transition-all duration-300 focus:ring-2 focus:ring-primary/20"
@@ -147,6 +192,7 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
                 onClick={() => {
                   setUrl('');
                   setDetectedPlatform(null);
+                  setDetectedContentType(null);
                 }}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
@@ -165,14 +211,21 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
           )}
         </div>
 
-        {detectedPlatform && (
-          <div className="flex items-center justify-center">
-            <Badge 
-              variant="secondary" 
-              className={`${platformColors[detectedPlatform as keyof typeof platformColors]} text-white border-0 animate-fade-in`}
-            >
-              {detectedPlatform.charAt(0).toUpperCase() + detectedPlatform.slice(1)} detected
-            </Badge>
+        {(detectedPlatform || detectedContentType) && (
+          <div className="flex items-center justify-center gap-2">
+            {detectedPlatform && (
+              <Badge 
+                variant="secondary" 
+                className={`${platformColors[detectedPlatform as keyof typeof platformColors]} text-white border-0 animate-fade-in`}
+              >
+                {detectedPlatform.charAt(0).toUpperCase() + detectedPlatform.slice(1)} detected
+              </Badge>
+            )}
+            {detectedContentType && (
+              <Badge variant="outline" className="animate-fade-in">
+                {detectedContentType}
+              </Badge>
+            )}
           </div>
         )}
 
@@ -183,12 +236,13 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
           disabled={!url.trim()}
         >
           <Download className="w-5 h-5 mr-2" />
-          Download {downloadType === 'video' ? 'Video' : 'MP3'}
+          Download {downloadType === 'video' ? `Video (${videoQuality})` : `MP3 (${audioQuality})`}
         </Button>
       </form>
 
       <div className="text-center text-sm text-muted-foreground">
-        <p>Supported platforms: YouTube, Instagram, TikTok, Facebook, X (Twitter), Twitch</p>
+        <p>Supported: YouTube, Instagram Reels & Posts, TikTok, Facebook, X (Twitter), Twitch</p>
+        <p className="text-xs mt-1">Perfect for downloading Instagram Reels, TikTok videos, and converting to MP3</p>
       </div>
     </div>
   );
