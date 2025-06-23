@@ -26,6 +26,11 @@ MediaSync is a full-stack web application that allows users to download videos a
 - Added download progress indicators and loading states for better UX
 - Implemented smart filename generation using video titles
 - Enhanced Facebook thumbnail extraction with multiple API approaches
+- **June 24, 2025 - Early Morning**: Fixed filename generation and optimized download speeds
+- Corrected smart filename system to properly use video titles instead of generic names
+- Added concurrent fragment downloading (4 fragments) for faster speeds
+- Reduced retry delays and optimized platform-specific settings for speed
+- Enhanced filename cleaning to remove special characters properly
 
 ## Architecture
 

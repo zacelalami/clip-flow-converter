@@ -54,19 +54,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fs.mkdirSync(downloadsDir, { recursive: true });
       }
 
-      // Get video info for smart filename
+      // Get video info for smart filename from URL first
       let videoTitle = "download";
       try {
         const videoInfoResult = await getVideoInfo(cleanUrl);
-        if (videoInfoResult && videoInfoResult.title) {
+        if (videoInfoResult && videoInfoResult.title && videoInfoResult.title !== "Titre non disponible") {
           // Clean title for filename (remove invalid characters)
           videoTitle = videoInfoResult.title
             .replace(/[^\w\s-]/g, '')
             .replace(/\s+/g, '_')
-            .substring(0, 50); // Limit length
+            .replace(/_+/g, '_')
+            .substring(0, 40); // Limit length
+          console.log(`Using smart filename: ${videoTitle}`);
         }
       } catch (error) {
-        console.log("Could not get video title for filename");
+        console.log("Could not get video title for filename, using default");
       }
 
       // Generate filename with title
@@ -81,19 +83,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cleanUrl = url.split('&list=')[0]; // Remove playlist parameter
       }
 
-      // Prepare platform-specific yt-dlp command
+      // Prepare platform-specific yt-dlp command with speed optimizations
       let ytDlpCommand;
-      let baseOptions = "--no-check-certificate --no-playlist --max-filesize 100M";
+      let baseOptions = "--no-check-certificate --no-playlist --max-filesize 120M --concurrent-fragments 4";
       
-      // Platform-specific optimizations with updated strategies
+      // Platform-specific optimizations with speed focus
       if (detectedPlatform === 'youtube') {
-        baseOptions += " --extractor-retries 5 --fragment-retries 5 --retry-sleep exp=1:120 --force-ipv4 --geo-bypass --embed-subs --write-auto-sub --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36\"";
+        baseOptions += " --extractor-retries 3 --fragment-retries 3 --retry-sleep linear=1::3 --force-ipv4 --geo-bypass --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36\"";
       } else if (detectedPlatform === 'instagram') {
-        baseOptions += " --extractor-retries 8 --fragment-retries 8 --retry-sleep linear=2::10";
+        baseOptions += " --extractor-retries 3 --fragment-retries 3 --retry-sleep linear=1::3";
       } else if (detectedPlatform === 'tiktok') {
-        baseOptions += " --extractor-retries 5 --fragment-retries 5 --retry-sleep linear=1::5";
+        baseOptions += " --extractor-retries 3 --fragment-retries 3 --retry-sleep linear=1::3";
+      } else if (detectedPlatform === 'facebook') {
+        baseOptions += " --extractor-retries 5 --fragment-retries 5 --retry-sleep linear=2::5";
       } else {
-        baseOptions += " --extractor-retries 8 --fragment-retries 8 --retry-sleep exp=1:30";
+        baseOptions += " --extractor-retries 3 --fragment-retries 3 --retry-sleep linear=1::3";
       }
 
       if (type === "video") {
@@ -186,9 +190,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw lastError || new Error("All download strategies failed");
       }
 
-      // Check if file was created (look for files with our timestamp or title)
+      // Check if file was created (look for files with our timestamp)
       const possibleFiles = fs.readdirSync(downloadsDir).filter(f => 
-        f.includes(timestamp.toString()) || f.startsWith(videoTitle.substring(0, 20))
+        f.includes(timestamp.toString())
       );
       
       if (possibleFiles.length === 0) {
@@ -196,6 +200,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const actualFilepath = path.join(downloadsDir, possibleFiles[0]);
+      
+      // Use smart filename for download, regardless of actual file name on disk
+      console.log(`Sending file with name: ${filename}`);
 
       // Send file for download with smart filename
       res.download(actualFilepath, filename, (err) => {
