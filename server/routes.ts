@@ -8,6 +8,7 @@ import fs from "fs";
 import Anthropic from "@anthropic-ai/sdk";
 import { downloadYouTubeVideo, getYouTubeInfo } from "./youtube-bypass";
 import { getVideoInfo } from "./platform-info";
+import { downloadFacebookVideo } from "./facebook-bypass";
 
 const execAsync = promisify(exec);
 
@@ -54,21 +55,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fs.mkdirSync(downloadsDir, { recursive: true });
       }
 
-      // Get video info for smart filename from URL first
-      let videoTitle = "download";
+      // Get video info for smart filename from URL first  
+      let videoTitle = "video";
       try {
         const videoInfoResult = await getVideoInfo(cleanUrl);
-        if (videoInfoResult && videoInfoResult.title && videoInfoResult.title !== "Titre non disponible") {
-          // Clean title for filename (remove invalid characters)
+        if (videoInfoResult && videoInfoResult.title && 
+            videoInfoResult.title !== "Titre non disponible" && 
+            videoInfoResult.title !== "Vidéo Facebook" &&
+            videoInfoResult.title !== "TikTok Video" &&
+            videoInfoResult.title !== "Instagram Reel") {
+          // Clean title for filename (handle Arabic and special characters)
           videoTitle = videoInfoResult.title
-            .replace(/[^\w\s-]/g, '')
-            .replace(/\s+/g, '_')
-            .replace(/_+/g, '_')
-            .substring(0, 40); // Limit length
-          console.log(`Using smart filename: ${videoTitle}`);
+            .replace(/[^\w\s-]/g, '') // Remove special chars including emojis
+            .replace(/\s+/g, '_')     // Replace spaces with underscores
+            .replace(/_+/g, '_')      // Collapse multiple underscores
+            .replace(/^_+|_+$/g, '')  // Remove leading/trailing underscores
+            .substring(0, 35);        // Limit length
+          
+          // If title becomes too short or empty after cleaning, use fallback
+          if (videoTitle.length < 2) {
+            videoTitle = detectedPlatform ? `${detectedPlatform}_content` : "video_content";
+          }
+          console.log(`Smart filename created: ${videoTitle}`);
+        } else {
+          // Try to extract from URL for fallback
+          if (cleanUrl.includes('tiktok.com')) {
+            videoTitle = "tiktok_video";
+          } else if (cleanUrl.includes('youtube.com')) {
+            videoTitle = "youtube_video";
+          } else if (cleanUrl.includes('facebook.com')) {
+            videoTitle = "facebook_video";
+          } else if (cleanUrl.includes('instagram.com')) {
+            videoTitle = cleanUrl.includes('/reel/') ? "instagram_reel" : "instagram_post";
+          }
+          console.log(`Using platform-based filename: ${videoTitle}`);
         }
       } catch (error) {
-        console.log("Could not get video title for filename, using default");
+        console.log("Could not get video title for filename, using platform default");
+        videoTitle = detectedPlatform ? `${detectedPlatform}_video` : "video";
       }
 
       // Generate filename with title
@@ -95,7 +119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (detectedPlatform === 'tiktok') {
         baseOptions += " --extractor-retries 3 --fragment-retries 3 --retry-sleep linear=1::3";
       } else if (detectedPlatform === 'facebook') {
-        baseOptions += " --extractor-retries 5 --fragment-retries 5 --retry-sleep linear=2::5";
+        baseOptions += " --extractor-retries 8 --fragment-retries 8 --retry-sleep exp=1:60 --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\"";
       } else {
         baseOptions += " --extractor-retries 3 --fragment-retries 3 --retry-sleep linear=1::3";
       }
@@ -129,7 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastError = error;
         console.log("Primary download failed, trying fallback strategies...", error.message);
         
-        // Strategy 2: Use specialized YouTube bypass for YouTube URLs
+        // Strategy 2: Use specialized bypasses for YouTube and Facebook
         if (detectedPlatform === 'youtube') {
           console.log("YouTube primary failed, using specialized bypass...");
           try {
@@ -139,6 +163,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           } catch (bypassError) {
             console.log("YouTube bypass failed:", bypassError.message);
+            lastError = bypassError;
+          }
+        } else if (detectedPlatform === 'facebook') {
+          console.log("Facebook primary failed, using specialized bypass...");
+          try {
+            downloadSuccess = await downloadFacebookVideo(cleanUrl, type, quality, filepath);
+            if (downloadSuccess) {
+              console.log("Facebook bypass succeeded!");
+            }
+          } catch (bypassError) {
+            console.log("Facebook bypass failed:", bypassError.message);
             lastError = bypassError;
           }
         }

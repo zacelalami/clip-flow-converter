@@ -96,9 +96,12 @@ export async function getVideoInfo(url: string): Promise<VideoInfo | null> {
           console.log('All Facebook oEmbed attempts failed');
         }
         
-        // Fallback to basic info
+        // Try to extract ID from URL for better title
+        const fbIdMatch = cleanUrl.match(/\/(\d+)/) || cleanUrl.match(/\/([a-zA-Z0-9]+)$/);
+        const fbId = fbIdMatch ? fbIdMatch[1] : '';
+        
         return {
-          title: "Vidéo Facebook",
+          title: fbId ? `Facebook_Reel_${fbId}` : "Facebook_Video",
           uploader: "Facebook User",
           thumbnail: null,
           duration: "Durée inconnue",
