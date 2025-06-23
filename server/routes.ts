@@ -6,6 +6,7 @@ import { promisify } from "util";
 import path from "path";
 import fs from "fs";
 import Anthropic from "@anthropic-ai/sdk";
+import { downloadYouTubeVideo, getYouTubeInfo } from "./youtube-bypass";
 
 const execAsync = promisify(exec);
 
@@ -108,44 +109,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastError = error;
         console.log("Primary download failed, trying fallback strategies...", error.message);
         
-        // Strategy 2: Enhanced YouTube fallback strategies
+        // Strategy 2: Use specialized YouTube bypass for YouTube URLs
         if (detectedPlatform === 'youtube') {
-          console.log("YouTube primary failed, trying enhanced strategies...");
-          
-          const youtubeStrategies = [
-            {
-              name: "YouTube Strategy 1: Updated approach with cookies simulation",
-              command: type === "video"
-                ? `yt-dlp --no-playlist --sleep-requests 1 --sleep-interval 2 --max-sleep-interval 5 --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "Cache-Control:no-cache" --add-header "DNT:1" --add-header "Sec-Fetch-Dest:document" --add-header "Sec-Fetch-Mode:navigate" --add-header "Sec-Fetch-Site:none" --add-header "Sec-Fetch-User:?1" -f "best[height<=${quality.replace('p', '')}]/best" --max-filesize 120M -o "${filepath}" "${cleanUrl}"`
-                : `yt-dlp --no-playlist --sleep-requests 1 --sleep-interval 2 --max-sleep-interval 5 --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" -x --audio-format mp3 --audio-quality ${audioQuality} --max-filesize 80M -o "${filepath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
-            },
-            {
-              name: "YouTube Strategy 2: Mobile approach",
-              command: type === "video"
-                ? `yt-dlp --no-playlist --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1" -f "18/mp4/best[height<=480]/worst" --max-filesize 100M -o "${filepath}" "${cleanUrl}"`
-                : `yt-dlp --no-playlist --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1" -x --audio-format mp3 --audio-quality 192 --max-filesize 60M -o "${filepath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
-            },
-            {
-              name: "YouTube Strategy 3: Alternative extractor",
-              command: type === "video"
-                ? `yt-dlp --no-playlist --force-generic-extractor --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36" -f "worst" --max-filesize 80M -o "${filepath}" "${cleanUrl}"`
-                : `yt-dlp --no-playlist --force-generic-extractor --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36" -x --audio-format mp3 --audio-quality 128 --max-filesize 40M -o "${filepath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+          console.log("YouTube primary failed, using specialized bypass...");
+          try {
+            downloadSuccess = await downloadYouTubeVideo(cleanUrl, type, quality, filepath);
+            if (downloadSuccess) {
+              console.log("YouTube bypass succeeded!");
             }
-          ];
-
-          for (const strategy of youtubeStrategies) {
-            if (downloadSuccess) break;
-            
-            try {
-              console.log(`Trying ${strategy.name}...`);
-              await execAsync(strategy.command, { timeout: 300000 });
-              downloadSuccess = true;
-              console.log(`${strategy.name} succeeded!`);
-              break;
-            } catch (strategyError) {
-              console.log(`${strategy.name} failed:`, strategyError.message);
-              lastError = strategyError;
-            }
+          } catch (bypassError) {
+            console.log("YouTube bypass failed:", bypassError.message);
+            lastError = bypassError;
           }
         }
 
@@ -346,32 +320,45 @@ Réponds en français de manière claire et utile. Si un utilisateur a des probl
       );
 
       let info = null;
-      for (const strategy of infoStrategies) {
+      
+      // For YouTube, use our specialized info fetcher
+      if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
         try {
-          if (strategy.type === 'oembed') {
-            console.log(`Trying oEmbed: ${strategy.url}`);
-            const response = await fetch(strategy.url);
-            if (response.ok) {
-              const oembedData = await response.json();
-              // Convert oEmbed to our format
-              info = {
-                title: oembedData.title,
-                uploader: oembedData.author_name,
-                thumbnail: oembedData.thumbnail_url,
-                duration: null, // oEmbed doesn't provide duration
-                extractor_key: 'youtube'
-              };
+          info = await getYouTubeInfo(cleanUrl);
+        } catch (error) {
+          console.log("YouTube info fetch failed:", error.message);
+        }
+      }
+      
+      // If YouTube info failed or it's not YouTube, try other strategies
+      if (!info) {
+        for (const strategy of infoStrategies) {
+          try {
+            if (strategy.type === 'oembed') {
+              console.log(`Trying oEmbed: ${strategy.url}`);
+              const response = await fetch(strategy.url);
+              if (response.ok) {
+                const oembedData = await response.json();
+                // Convert oEmbed to our format
+                info = {
+                  title: oembedData.title,
+                  uploader: oembedData.author_name,
+                  thumbnail: oembedData.thumbnail_url,
+                  duration: "Durée inconnue", // oEmbed doesn't provide duration
+                  extractor_key: 'youtube'
+                };
+                break;
+              }
+            } else {
+              console.log(`Trying yt-dlp: ${strategy.command}`);
+              const { stdout } = await execAsync(strategy.command, { timeout: 30000 });
+              info = JSON.parse(stdout);
               break;
             }
-          } else {
-            console.log(`Trying yt-dlp: ${strategy.command}`);
-            const { stdout } = await execAsync(strategy.command, { timeout: 30000 });
-            info = JSON.parse(stdout);
-            break;
+          } catch (strategyError) {
+            console.log(`Strategy failed: ${strategyError.message}`);
+            continue;
           }
-        } catch (strategyError) {
-          console.log(`Strategy failed: ${strategyError.message}`);
-          continue;
         }
       }
 
@@ -394,11 +381,11 @@ Réponds en français de manière claire et utile. Si un utilisateur a des probl
 
       res.json({
         title: info.title || "Titre non disponible",
-        duration: formatDuration(info.duration),
+        duration: info.duration || formatDuration(info.duration),
         durationSeconds: info.duration || 0,
         thumbnail: info.thumbnail || info.thumbnails?.[0]?.url || null,
         uploader: info.uploader || info.channel || "Auteur inconnu",
-        platform: info.extractor_key || "unknown",
+        platform: info.platform || info.extractor_key || "unknown",
         viewCount: info.view_count || null,
         uploadDate: info.upload_date || null
       });

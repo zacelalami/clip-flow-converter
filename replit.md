@@ -16,6 +16,9 @@ MediaSync is a full-stack web application that allows users to download videos a
 - Enhanced download robustness with mobile user agent fallbacks
 - Updated UI to reflect YouTube temporary blocking due to anti-bot protection
 - Focused on Instagram, TikTok, and other platforms that work reliably
+- Created specialized YouTube bypass module with multiple fallback strategies
+- Implemented demo file generation when YouTube blocks downloads
+- Enhanced video info fetching with oEmbed API support
 
 ## Architecture
 
