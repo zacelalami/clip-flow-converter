@@ -46,28 +46,34 @@ const Index = () => {
 
   const handleDownload = async (url: string, type: 'video' | 'audio', quality?: string) => {
     try {
-      // Detect content type for better naming
-      const getContentType = (url: string) => {
-        if (/instagram\.com\/reel/i.test(url)) return 'Instagram Reel';
-        if (/instagram\.com\/p\//i.test(url)) return 'Instagram Post';
-        if (/tiktok\.com/i.test(url)) return 'TikTok Video';
-        if (/youtube\.com\/shorts/i.test(url)) return 'YouTube Short';
-        return `${detectPlatform(url) || 'Video'} content`;
-      };
+      toast({
+        title: "Download starting...",
+        description: "Preparing your download, this may take a moment.",
+      });
 
-      const contentType = getContentType(url);
-      const platform = detectPlatform(url);
-      
-      // Create a blob URL for demonstration (in a real app, this would be actual media content)
-      const filename = `${contentType.replace(/\s+/g, '_')}_${Date.now()}.${type === 'video' ? 'mp4' : 'mp3'}`;
-      
-      // For demo purposes, create a text file with the URL info
-      // In a real implementation, this would be the actual video/audio file
-      const demoContent = `MediaSync Download\n\nOriginal URL: ${url}\nPlatform: ${platform}\nType: ${type}\nQuality: ${quality}\nDownloaded: ${new Date().toISOString()}`;
-      const blob = new Blob([demoContent], { type: 'text/plain' });
-      const downloadUrl = URL.createObjectURL(blob);
-      
+      // Call the backend API to download the actual file
+      const response = await fetch('/api/download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url, type, quality }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Download failed');
+      }
+
+      // Get the file blob from response
+      const blob = await response.blob();
+      const contentDisposition = response.headers.get('content-disposition');
+      const filename = contentDisposition 
+        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '') 
+        : `download_${Date.now()}.${type === 'video' ? 'mp4' : 'mp3'}`;
+
       // Create download link and trigger download
+      const downloadUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = filename;
@@ -77,6 +83,19 @@ const Index = () => {
       
       // Clean up the blob URL
       setTimeout(() => URL.revokeObjectURL(downloadUrl), 100);
+
+      // Detect content type for better naming
+      const getContentType = (url: string) => {
+        if (/instagram\.com\/reel/i.test(url)) return 'Instagram Reel';
+        if (/instagram\.com\/p\//i.test(url)) return 'Instagram Post';
+        if (/tiktok\.com/i.test(url)) return 'TikTok Video';
+        if (/youtube\.com\/shorts/i.test(url)) return 'YouTube Short';
+        if (/youtube\.com|youtu\.be/i.test(url)) return 'YouTube Video';
+        return `${detectPlatform(url) || 'Video'} content`;
+      };
+
+      const contentType = getContentType(url);
+      const platform = detectPlatform(url);
       
       // Add to download history
       const newDownload: Download = {
@@ -97,14 +116,14 @@ const Index = () => {
 
       toast({
         title: "Download completed!",
-        description: `Your ${type} has been downloaded to your Downloads folder.`,
+        description: `Your ${type} has been successfully downloaded.`,
       });
       
     } catch (error) {
       console.error('Download error:', error);
       toast({
         title: "Download failed",
-        description: "There was an error downloading the file. Please try again.",
+        description: error.message || "There was an error downloading the file. Please try again.",
         variant: "destructive",
       });
     }

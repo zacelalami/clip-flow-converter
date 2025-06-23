@@ -26,15 +26,38 @@ const RecentDownloads: React.FC<RecentDownloadsProps> = ({ downloads, onClearHis
 
   const handleDownloadClick = async (download: Download) => {
     try {
-      // Create a re-download with proper file handling
-      const filename = `${download.title.replace(/\s+/g, '_')}_redownload_${Date.now()}.${download.type === 'video' ? 'mp4' : 'mp3'}`;
-      
-      // Create demo content for the re-download
-      const demoContent = `MediaSync Re-Download\n\nOriginal URL: ${download.url}\nPlatform: ${download.platform}\nType: ${download.type}\nQuality: ${download.quality || 'default'}\nOriginal Download: ${download.timestamp.toISOString()}\nRe-downloaded: ${new Date().toISOString()}`;
-      const blob = new Blob([demoContent], { type: 'text/plain' });
+      toast({
+        title: "Re-download starting...",
+        description: "Preparing your re-download, this may take a moment.",
+      });
+
+      // Call the backend API to re-download the file
+      const response = await fetch('/api/download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          url: download.url, 
+          type: download.type, 
+          quality: download.quality 
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Re-download failed');
+      }
+
+      // Get the file blob from response
+      const blob = await response.blob();
+      const contentDisposition = response.headers.get('content-disposition');
+      const filename = contentDisposition 
+        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '') 
+        : `redownload_${Date.now()}.${download.type === 'video' ? 'mp4' : 'mp3'}`;
+
+      // Create download link and trigger download
       const downloadUrl = URL.createObjectURL(blob);
-      
-      // Trigger download
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = filename;
@@ -42,7 +65,7 @@ const RecentDownloads: React.FC<RecentDownloadsProps> = ({ downloads, onClearHis
       link.click();
       document.body.removeChild(link);
       
-      // Clean up
+      // Clean up the blob URL
       setTimeout(() => URL.revokeObjectURL(downloadUrl), 100);
       
       toast({
@@ -53,7 +76,7 @@ const RecentDownloads: React.FC<RecentDownloadsProps> = ({ downloads, onClearHis
       console.error('Re-download error:', error);
       toast({
         title: "Re-download failed",
-        description: "There was an error re-downloading the file.",
+        description: error.message || "There was an error re-downloading the file.",
         variant: "destructive",
       });
     }
