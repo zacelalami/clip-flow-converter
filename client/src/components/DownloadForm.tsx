@@ -125,7 +125,7 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
           <div className="text-center space-y-2">
             <h2 className="text-2xl font-semibold">Download Videos</h2>
             <p className="text-muted-foreground">
-              Download videos from YouTube, Instagram Reels, TikTok, Facebook, X and more
+              Téléchargez des vidéos depuis Instagram Reels, TikTok, Facebook, X et plus
             </p>
           </div>
           <div className="flex justify-center">
@@ -241,8 +241,8 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
       </form>
 
       <div className="text-center text-sm text-muted-foreground space-y-2">
-        <p>Supported: YouTube, Instagram Reels & Posts, TikTok, Facebook, X (Twitter), Twitch</p>
-        <p className="text-xs">Perfect for downloading Instagram Reels, TikTok videos, and converting to MP3</p>
+        <p>Supporté: Instagram Reels & Posts, TikTok, Facebook, X (Twitter), Twitch</p>
+        <p className="text-xs">Parfait pour télécharger des Instagram Reels, vidéos TikTok, et convertir en MP3</p>
         <div className="flex flex-wrap justify-center gap-2 mt-3">
           <span className="text-xs bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">
             ✓ Instagram Reels
@@ -250,8 +250,8 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
           <span className="text-xs bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">
             ✓ TikTok Videos
           </span>
-          <span className="text-xs bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded-full">
-            ⚠ YouTube (some protected)
+          <span className="text-xs bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200 px-2 py-1 rounded-full">
+            ✗ YouTube (temporairement bloqué)
           </span>
         </div>
       </div>

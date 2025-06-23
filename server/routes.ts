@@ -70,7 +70,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Platform-specific optimizations
       if (detectedPlatform === 'youtube') {
-        baseOptions += " --add-header \"Accept:text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8\" --add-header \"Accept-Language:en-US,en;q=0.5\" --add-header \"Sec-Fetch-Dest:document\" --add-header \"Sec-Fetch-Mode:navigate\" --extractor-retries 10 --fragment-retries 10 --retry-sleep exp=1:60 --throttled-rate 100K --embed-subs --write-auto-sub";
+        baseOptions += " --extractor-retries 3 --fragment-retries 3 --retry-sleep linear=1::3 --force-ipv4 --geo-bypass";
       } else if (detectedPlatform === 'instagram') {
         baseOptions += " --extractor-retries 8 --fragment-retries 8 --retry-sleep linear=2::10";
       } else if (detectedPlatform === 'tiktok') {
@@ -108,46 +108,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastError = error;
         console.log("Primary download failed, trying fallback strategies...", error.message);
         
-        // Strategy 2: Try with different user agents and simpler formats
+        // Strategy 2: Special handling for YouTube anti-bot protection
+        if (detectedPlatform === 'youtube') {
+          console.log("YouTube detected anti-bot protection, informing user...");
+          throw new Error("YouTube a détecté une activité automatisée et bloque temporairement les téléchargements. Ceci est dû à leurs mesures de protection anti-bot. Veuillez essayer plus tard ou utiliser une autre plateforme comme Instagram ou TikTok.");
+        }
+
+        // For other platforms, use regular fallback strategies
         const fallbackStrategies = [
           {
             name: "Mobile Safari",
             ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-            options: "--no-playlist --extractor-retries 10 --fragment-retries 10 --retry-sleep linear=1::5"
-          },
-          {
-            name: "Android Chrome",
-            ua: "Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
-            options: "--no-playlist --extractor-retries 8 --fragment-retries 8 --retry-sleep linear=2::8"
+            options: "--no-playlist --extractor-retries 3 --fragment-retries 3 --retry-sleep linear=1::3"
           },
           {
             name: "Simple approach",
             ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            options: "--no-playlist --no-check-certificate --ignore-errors"
+            options: "--no-playlist --no-check-certificate --ignore-errors --extractor-retries 2"
           }
         ];
 
-        for (const strategy of fallbackStrategies) {
-          if (downloadSuccess) break;
-          
-          try {
-            console.log(`Trying ${strategy.name} strategy...`);
+        // Only try fallback strategies for non-YouTube platforms or if YouTube alternative failed
+        if (!downloadSuccess && detectedPlatform !== 'youtube') {
+          for (const strategy of fallbackStrategies) {
+            if (downloadSuccess) break;
             
-            let fallbackCommand;
-            if (type === "video") {
-              fallbackCommand = `yt-dlp --user-agent "${strategy.ua}" ${strategy.options} -f "18/mp4/best[height<=480]/worst" --max-filesize 80M -o "${filepath}" "${cleanUrl}"`;
-            } else {
-              fallbackCommand = `yt-dlp --user-agent "${strategy.ua}" ${strategy.options} -x --audio-format mp3 --audio-quality 192 --max-filesize 50M -o "${filepath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`;
+            try {
+              console.log(`Trying ${strategy.name} strategy...`);
+              
+              let fallbackCommand;
+              if (type === "video") {
+                fallbackCommand = `yt-dlp --user-agent "${strategy.ua}" ${strategy.options} -f "18/mp4/best[height<=480]/worst" --max-filesize 80M -o "${filepath}" "${cleanUrl}"`;
+              } else {
+                fallbackCommand = `yt-dlp --user-agent "${strategy.ua}" ${strategy.options} -x --audio-format mp3 --audio-quality 192 --max-filesize 50M -o "${filepath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`;
+              }
+              
+              console.log(`Executing fallback: ${fallbackCommand}`);
+              await execAsync(fallbackCommand, { timeout: 120000 });
+              downloadSuccess = true;
+              console.log(`${strategy.name} strategy succeeded!`);
+              break;
+            } catch (strategyError) {
+              console.log(`${strategy.name} strategy failed:`, strategyError.message);
+              lastError = strategyError;
             }
-            
-            console.log(`Executing fallback: ${fallbackCommand}`);
-            await execAsync(fallbackCommand, { timeout: 240000 });
-            downloadSuccess = true;
-            console.log(`${strategy.name} strategy succeeded!`);
-            break;
-          } catch (strategyError) {
-            console.log(`${strategy.name} strategy failed:`, strategyError.message);
-            lastError = strategyError;
           }
         }
       }
