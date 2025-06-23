@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useCallback } from 'react';
-import { Download, Link, Music, Video, Upload, X } from 'lucide-react';
+import { Download, Link, Music, Video, Upload, X, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -12,6 +12,17 @@ interface DownloadFormProps {
   onDownload: (url: string, type: 'video' | 'audio', quality?: string) => void;
 }
 
+interface VideoInfo {
+  title: string;
+  duration: string;
+  durationSeconds: number;
+  thumbnail: string | null;
+  uploader: string;
+  platform: string;
+  viewCount: number | null;
+  uploadDate: string | null;
+}
+
 const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
   const [url, setUrl] = useState('');
   const [downloadType, setDownloadType] = useState<'video' | 'audio'>('video');
@@ -20,6 +31,8 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [detectedPlatform, setDetectedPlatform] = useState<string | null>(null);
   const [detectedContentType, setDetectedContentType] = useState<string | null>(null);
+  const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
+  const [isLoadingInfo, setIsLoadingInfo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -54,9 +67,49 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
     return null;
   };
 
+  const fetchVideoInfo = async (url: string) => {
+    if (!url.trim()) {
+      setVideoInfo(null);
+      return;
+    }
+
+    setIsLoadingInfo(true);
+    try {
+      const response = await fetch('/api/video-info', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      if (response.ok) {
+        const info = await response.json();
+        setVideoInfo(info);
+      } else {
+        setVideoInfo(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch video info:', error);
+      setVideoInfo(null);
+    }
+    setIsLoadingInfo(false);
+  };
+
   const handleUrlChange = (value: string) => {
     setUrl(value);
     setDetectedPlatform(detectPlatform(value));
+    
+    // Debounce video info fetching
+    const timeoutId = setTimeout(() => {
+      if (value.trim()) {
+        fetchVideoInfo(value);
+      } else {
+        setVideoInfo(null);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
   };
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -125,7 +178,7 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
           <div className="text-center space-y-2">
             <h2 className="text-2xl font-semibold">Download Videos</h2>
             <p className="text-muted-foreground">
-              Téléchargez des vidéos depuis Instagram Reels, TikTok, Facebook, X et plus
+              Téléchargez des vidéos depuis YouTube, Instagram Reels, TikTok, Facebook, X et plus
             </p>
           </div>
           <div className="flex justify-center">
@@ -240,8 +293,64 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
         </Button>
       </form>
 
+      {/* Video Info Preview */}
+      {isLoadingInfo && (
+        <div className="mt-4 p-4 bg-muted/50 rounded-lg animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="w-20 h-12 bg-muted rounded"></div>
+            <div className="flex-1">
+              <div className="h-4 bg-muted rounded mb-2"></div>
+              <div className="h-3 bg-muted rounded w-2/3"></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {videoInfo && !isLoadingInfo && (
+        <div className="mt-4 p-4 bg-gradient-to-r from-primary/5 to-secondary/5 rounded-lg border border-primary/20">
+          <div className="flex items-start gap-3">
+            {videoInfo.thumbnail && (
+              <div className="flex-shrink-0">
+                <img
+                  src={videoInfo.thumbnail}
+                  alt="Video thumbnail"
+                  className="w-24 h-16 object-cover rounded-lg border"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-medium text-sm line-clamp-2 mb-1">
+                {videoInfo.title}
+              </h3>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {videoInfo.duration}
+                </span>
+                <span>•</span>
+                <span>{videoInfo.uploader}</span>
+                {videoInfo.viewCount && (
+                  <>
+                    <span>•</span>
+                    <span>{videoInfo.viewCount.toLocaleString()} vues</span>
+                  </>
+                )}
+              </div>
+              <div className="mt-1">
+                <Badge variant="outline" className="text-xs">
+                  {videoInfo.platform.toUpperCase()}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="text-center text-sm text-muted-foreground space-y-2">
-        <p>Supporté: Instagram Reels & Posts, TikTok, Facebook, X (Twitter), Twitch</p>
+        <p>Supporté: YouTube, Instagram Reels & Posts, TikTok, Facebook, X (Twitter), Twitch</p>
         <p className="text-xs">Parfait pour télécharger des Instagram Reels, vidéos TikTok, et convertir en MP3</p>
         <div className="flex flex-wrap justify-center gap-2 mt-3">
           <span className="text-xs bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">
@@ -250,8 +359,8 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
           <span className="text-xs bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">
             ✓ TikTok Videos
           </span>
-          <span className="text-xs bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200 px-2 py-1 rounded-full">
-            ✗ YouTube (temporairement bloqué)
+          <span className="text-xs bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">
+            ✓ YouTube (amélioré)
           </span>
         </div>
       </div>

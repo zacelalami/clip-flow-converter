@@ -66,11 +66,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Prepare platform-specific yt-dlp command
       let ytDlpCommand;
-      let baseOptions = "--no-check-certificate --no-playlist --max-filesize 100M --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36\"";
+      let baseOptions = "--no-check-certificate --no-playlist --max-filesize 100M";
       
-      // Platform-specific optimizations
+      // Platform-specific optimizations with updated strategies
       if (detectedPlatform === 'youtube') {
-        baseOptions += " --extractor-retries 3 --fragment-retries 3 --retry-sleep linear=1::3 --force-ipv4 --geo-bypass";
+        baseOptions += " --extractor-retries 5 --fragment-retries 5 --retry-sleep exp=1:120 --force-ipv4 --geo-bypass --embed-subs --write-auto-sub --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36\"";
       } else if (detectedPlatform === 'instagram') {
         baseOptions += " --extractor-retries 8 --fragment-retries 8 --retry-sleep linear=2::10";
       } else if (detectedPlatform === 'tiktok') {
@@ -108,10 +108,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastError = error;
         console.log("Primary download failed, trying fallback strategies...", error.message);
         
-        // Strategy 2: Special handling for YouTube anti-bot protection
+        // Strategy 2: Enhanced YouTube fallback strategies
         if (detectedPlatform === 'youtube') {
-          console.log("YouTube detected anti-bot protection, informing user...");
-          throw new Error("YouTube a détecté une activité automatisée et bloque temporairement les téléchargements. Ceci est dû à leurs mesures de protection anti-bot. Veuillez essayer plus tard ou utiliser une autre plateforme comme Instagram ou TikTok.");
+          console.log("YouTube primary failed, trying enhanced strategies...");
+          
+          const youtubeStrategies = [
+            {
+              name: "YouTube Strategy 1: Updated approach with cookies simulation",
+              command: type === "video"
+                ? `yt-dlp --no-playlist --sleep-requests 1 --sleep-interval 2 --max-sleep-interval 5 --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "Cache-Control:no-cache" --add-header "DNT:1" --add-header "Sec-Fetch-Dest:document" --add-header "Sec-Fetch-Mode:navigate" --add-header "Sec-Fetch-Site:none" --add-header "Sec-Fetch-User:?1" -f "best[height<=${quality.replace('p', '')}]/best" --max-filesize 120M -o "${filepath}" "${cleanUrl}"`
+                : `yt-dlp --no-playlist --sleep-requests 1 --sleep-interval 2 --max-sleep-interval 5 --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" -x --audio-format mp3 --audio-quality ${audioQuality} --max-filesize 80M -o "${filepath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+            },
+            {
+              name: "YouTube Strategy 2: Mobile approach",
+              command: type === "video"
+                ? `yt-dlp --no-playlist --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1" -f "18/mp4/best[height<=480]/worst" --max-filesize 100M -o "${filepath}" "${cleanUrl}"`
+                : `yt-dlp --no-playlist --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1" -x --audio-format mp3 --audio-quality 192 --max-filesize 60M -o "${filepath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+            },
+            {
+              name: "YouTube Strategy 3: Alternative extractor",
+              command: type === "video"
+                ? `yt-dlp --no-playlist --force-generic-extractor --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36" -f "worst" --max-filesize 80M -o "${filepath}" "${cleanUrl}"`
+                : `yt-dlp --no-playlist --force-generic-extractor --user-agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36" -x --audio-format mp3 --audio-quality 128 --max-filesize 40M -o "${filepath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+            }
+          ];
+
+          for (const strategy of youtubeStrategies) {
+            if (downloadSuccess) break;
+            
+            try {
+              console.log(`Trying ${strategy.name}...`);
+              await execAsync(strategy.command, { timeout: 300000 });
+              downloadSuccess = true;
+              console.log(`${strategy.name} succeeded!`);
+              break;
+            } catch (strategyError) {
+              console.log(`${strategy.name} failed:`, strategyError.message);
+              lastError = strategyError;
+            }
+          }
         }
 
         // For other platforms, use regular fallback strategies
@@ -205,7 +240,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else if (error.message.includes("timeout") || error.message.includes("TIMEOUT")) {
           res.status(408).json({ error: "Délai d'attente dépassé. La vidéo est peut-être trop volumineuse." });
         } else if (error.message.includes("Sign in to confirm") || error.message.includes("bot")) {
-          res.status(429).json({ error: "YouTube a détecté une activité automatisée. Veuillez réessayer dans quelques minutes." });
+          res.status(429).json({ error: "Protection anti-bot YouTube activée. Essayez un autre lien ou réessayez dans quelques minutes." });
         } else {
           res.status(500).json({ error: "Échec du téléchargement. Cette vidéo pourrait être protégée ou indisponible." });
         }
@@ -277,7 +312,7 @@ Réponds en français de manière claire et utile. Si un utilisateur a des probl
     }
   });
 
-  // Get video info endpoint
+  // Get video info endpoint with enhanced support
   app.post("/api/video-info", async (req, res) => {
     try {
       const { url } = req.body;
@@ -286,23 +321,91 @@ Réponds en français de manière claire et utile. Si un utilisateur a des probl
         return res.status(400).json({ error: "URL is required" });
       }
 
-      // Get video information using yt-dlp
-      const infoCommand = `yt-dlp --dump-json --no-download "${url}"`;
-      const { stdout } = await execAsync(infoCommand);
+      // Clean URL
+      let cleanUrl = url;
+      if (url.includes('list=')) {
+        cleanUrl = url.split('&list=')[0];
+      }
+
+      // Try multiple strategies to get video info, including YouTube oEmbed API
+      const infoStrategies = [];
       
-      const info = JSON.parse(stdout);
+      // For YouTube, try oEmbed API first as it's more reliable
+      if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
+        infoStrategies.push({
+          type: 'oembed',
+          url: `https://youtube.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json`
+        });
+      }
       
+      // Add yt-dlp strategies
+      infoStrategies.push(
+        { type: 'ytdlp', command: `yt-dlp --dump-json --no-download --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36" "${cleanUrl}"` },
+        { type: 'ytdlp', command: `yt-dlp --dump-json --no-download --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15" "${cleanUrl}"` },
+        { type: 'ytdlp', command: `yt-dlp --dump-json --no-download --force-generic-extractor "${cleanUrl}"` }
+      );
+
+      let info = null;
+      for (const strategy of infoStrategies) {
+        try {
+          if (strategy.type === 'oembed') {
+            console.log(`Trying oEmbed: ${strategy.url}`);
+            const response = await fetch(strategy.url);
+            if (response.ok) {
+              const oembedData = await response.json();
+              // Convert oEmbed to our format
+              info = {
+                title: oembedData.title,
+                uploader: oembedData.author_name,
+                thumbnail: oembedData.thumbnail_url,
+                duration: null, // oEmbed doesn't provide duration
+                extractor_key: 'youtube'
+              };
+              break;
+            }
+          } else {
+            console.log(`Trying yt-dlp: ${strategy.command}`);
+            const { stdout } = await execAsync(strategy.command, { timeout: 30000 });
+            info = JSON.parse(stdout);
+            break;
+          }
+        } catch (strategyError) {
+          console.log(`Strategy failed: ${strategyError.message}`);
+          continue;
+        }
+      }
+
+      if (!info) {
+        return res.status(500).json({ error: "Impossible de récupérer les informations de la vidéo" });
+      }
+
+      // Format duration
+      const formatDuration = (seconds) => {
+        if (!seconds) return "Durée inconnue";
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        
+        if (hours > 0) {
+          return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        return `${minutes}:${secs.toString().padStart(2, '0')}`;
+      };
+
       res.json({
-        title: info.title,
-        duration: info.duration,
-        thumbnail: info.thumbnail,
-        uploader: info.uploader,
-        platform: info.extractor_key
+        title: info.title || "Titre non disponible",
+        duration: formatDuration(info.duration),
+        durationSeconds: info.duration || 0,
+        thumbnail: info.thumbnail || info.thumbnails?.[0]?.url || null,
+        uploader: info.uploader || info.channel || "Auteur inconnu",
+        platform: info.extractor_key || "unknown",
+        viewCount: info.view_count || null,
+        uploadDate: info.upload_date || null
       });
 
     } catch (error) {
       console.error("Info fetch error:", error);
-      res.status(500).json({ error: "Failed to fetch video information" });
+      res.status(500).json({ error: "Échec de récupération des informations vidéo" });
     }
   });
 
