@@ -208,8 +208,16 @@ const Index = () => {
         </div>
 
         {/* Download Form */}
-        <div className="mb-16 animate-slide-up">
+        <div className="mb-8 animate-slide-up">
           <DownloadForm onDownload={handleDownload} />
+        </div>
+
+        {/* Recent Downloads - moved here */}
+        <div className="max-w-2xl mx-auto mb-16 animate-fade-in">
+          <RecentDownloads 
+            downloads={downloads} 
+            onClearHistory={handleClearHistory}
+          />
         </div>
 
         {/* Why Choose Us Section */}
