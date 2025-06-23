@@ -18,7 +18,7 @@ const SupportChat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Hi! I\'m here to help you with any questions about downloading videos or audio. What can I help you with?',
+      text: 'Bonjour! Je suis Claude, votre assistant IA. Je peux vous aider avec MediaSync pour télécharger des vidéos et de l\'audio depuis différentes plateformes. Comment puis-je vous aider?',
       isUser: false,
       timestamp: new Date(),
     },
@@ -26,13 +26,14 @@ const SupportChat: React.FC = () => {
   const [inputMessage, setInputMessage] = useState('');
 
   const commonQuestions = [
-    'How do I download from YouTube?',
-    'What formats are supported?',
-    'Is it free to use?',
-    'Download quality options',
+    'Comment télécharger depuis YouTube?',
+    'Quels formats sont supportés?',
+    'Problème de téléchargement Instagram',
+    'Options de qualité vidéo',
+    'Erreur de téléchargement TikTok',
   ];
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
     const userMessage: Message = {
@@ -43,18 +44,56 @@ const SupportChat: React.FC = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentMessage = inputMessage;
     setInputMessage('');
 
-    // Simulate bot response
-    setTimeout(() => {
-      const botResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        text: 'Thanks for your question! I\'m a demo chatbot. In a real implementation, I would provide helpful answers about video downloading, supported platforms, and troubleshooting tips.',
-        isUser: false,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, botResponse]);
-    }, 1000);
+    // Add typing indicator
+    const typingMessage: Message = {
+      id: 'typing',
+      text: 'Claude tape...',
+      isUser: false,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, typingMessage]);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: currentMessage,
+          conversationHistory: messages.filter(m => m.id !== 'typing').slice(-10) // Last 10 messages for context
+        }),
+      });
+
+      const data = await response.json();
+
+      // Remove typing indicator and add response
+      setMessages(prev => {
+        const withoutTyping = prev.filter(m => m.id !== 'typing');
+        return [...withoutTyping, {
+          id: (Date.now() + 1).toString(),
+          text: data.response || data.fallback || 'Désolé, je ne peux pas répondre en ce moment.',
+          isUser: false,
+          timestamp: new Date(),
+        }];
+      });
+
+    } catch (error) {
+      console.error('Chat error:', error);
+      // Remove typing indicator and add error message
+      setMessages(prev => {
+        const withoutTyping = prev.filter(m => m.id !== 'typing');
+        return [...withoutTyping, {
+          id: (Date.now() + 1).toString(),
+          text: 'Désolé, il y a eu un problème avec le service de chat. Pour les problèmes de téléchargement, vérifiez que votre URL est correcte et que la vidéo est publique.',
+          isUser: false,
+          timestamp: new Date(),
+        }];
+      });
+    }
   };
 
   const handleQuestionClick = (question: string) => {
@@ -79,7 +118,7 @@ const SupportChat: React.FC = () => {
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <HelpCircle className="w-5 h-5" />
-                Support Chat
+                Chat avec Claude AI
               </CardTitle>
               <Button
                 variant="ghost"
@@ -113,7 +152,7 @@ const SupportChat: React.FC = () => {
 
               {/* Quick Questions */}
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Quick questions:</p>
+                <p className="text-xs text-muted-foreground">Questions rapides:</p>
                 <div className="flex flex-wrap gap-1">
                   {commonQuestions.map((question) => (
                     <Badge
@@ -131,7 +170,7 @@ const SupportChat: React.FC = () => {
               {/* Message Input */}
               <div className="flex gap-2">
                 <Input
-                  placeholder="Type your message..."
+                  placeholder="Tapez votre message..."
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
