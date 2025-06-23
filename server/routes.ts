@@ -7,6 +7,7 @@ import path from "path";
 import fs from "fs";
 import Anthropic from "@anthropic-ai/sdk";
 import { downloadYouTubeVideo, getYouTubeInfo } from "./youtube-bypass";
+import { getVideoInfo } from "./platform-info";
 
 const execAsync = promisify(exec);
 
@@ -295,100 +296,20 @@ Réponds en français de manière claire et utile. Si un utilisateur a des probl
         return res.status(400).json({ error: "URL is required" });
       }
 
-      // Clean URL
+      // Clean URL for processing
       let cleanUrl = url;
       if (url.includes('list=')) {
         cleanUrl = url.split('&list=')[0];
       }
 
-      // Try multiple strategies to get video info, including YouTube oEmbed API
-      const infoStrategies = [];
-      
-      // For YouTube, try oEmbed API first as it's more reliable
-      if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
-        infoStrategies.push({
-          type: 'oembed',
-          url: `https://youtube.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json`
-        });
-      }
-      
-      // Add yt-dlp strategies
-      infoStrategies.push(
-        { type: 'ytdlp', command: `yt-dlp --dump-json --no-download --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36" "${cleanUrl}"` },
-        { type: 'ytdlp', command: `yt-dlp --dump-json --no-download --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15" "${cleanUrl}"` },
-        { type: 'ytdlp', command: `yt-dlp --dump-json --no-download --force-generic-extractor "${cleanUrl}"` }
-      );
-
-      let info = null;
-      
-      // For YouTube, use our specialized info fetcher
-      if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
-        try {
-          info = await getYouTubeInfo(cleanUrl);
-        } catch (error) {
-          console.log("YouTube info fetch failed:", error.message);
-        }
-      }
-      
-      // If YouTube info failed or it's not YouTube, try other strategies
-      if (!info) {
-        for (const strategy of infoStrategies) {
-          try {
-            if (strategy.type === 'oembed') {
-              console.log(`Trying oEmbed: ${strategy.url}`);
-              const response = await fetch(strategy.url);
-              if (response.ok) {
-                const oembedData = await response.json();
-                // Convert oEmbed to our format
-                info = {
-                  title: oembedData.title,
-                  uploader: oembedData.author_name,
-                  thumbnail: oembedData.thumbnail_url,
-                  duration: "Durée inconnue", // oEmbed doesn't provide duration
-                  extractor_key: 'youtube'
-                };
-                break;
-              }
-            } else {
-              console.log(`Trying yt-dlp: ${strategy.command}`);
-              const { stdout } = await execAsync(strategy.command, { timeout: 30000 });
-              info = JSON.parse(stdout);
-              break;
-            }
-          } catch (strategyError) {
-            console.log(`Strategy failed: ${strategyError.message}`);
-            continue;
-          }
-        }
-      }
+      // Use unified video info system for all platforms
+      const info = await getVideoInfo(cleanUrl);
 
       if (!info) {
         return res.status(500).json({ error: "Impossible de récupérer les informations de la vidéo" });
       }
 
-      // Format duration
-      const formatDuration = (seconds) => {
-        if (!seconds) return "Durée inconnue";
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        
-        if (hours > 0) {
-          return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-        return `${minutes}:${secs.toString().padStart(2, '0')}`;
-      };
-
-      res.json({
-        title: info.title || "Titre non disponible",
-        duration: info.duration || formatDuration(info.duration),
-        durationSeconds: info.duration || 0,
-        thumbnail: info.thumbnail || info.thumbnails?.[0]?.url || null,
-        uploader: info.uploader || info.channel || "Auteur inconnu",
-        platform: info.platform || info.extractor_key || "unknown",
-        viewCount: info.view_count || null,
-        uploadDate: info.upload_date || null
-      });
+      res.json(info);
 
     } catch (error) {
       console.error("Info fetch error:", error);
