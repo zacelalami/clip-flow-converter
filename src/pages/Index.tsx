@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Download, Zap, Shield, Globe, Star, Users, Clock } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import DownloadForm from '@/components/DownloadForm';
+import RecentDownloads from '@/components/RecentDownloads';
 import SupportChat from '@/components/SupportChat';
 import { useToast } from '@/hooks/use-toast';
 
@@ -206,8 +208,16 @@ const Index = () => {
         </div>
 
         {/* Download Form */}
-        <div className="mb-16 animate-slide-up">
+        <div className="mb-8 animate-slide-up">
           <DownloadForm onDownload={handleDownload} />
+        </div>
+
+        {/* Recent Downloads - moved here */}
+        <div className="max-w-2xl mx-auto mb-16 animate-fade-in">
+          <RecentDownloads 
+            downloads={downloads} 
+            onClearHistory={handleClearHistory}
+          />
         </div>
 
         {/* Why Choose Us Section */}
@@ -280,6 +290,14 @@ const Index = () => {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Recent Downloads */}
+        <div className="max-w-2xl mx-auto animate-fade-in">
+          <RecentDownloads 
+            downloads={downloads} 
+            onClearHistory={handleClearHistory}
+          />
         </div>
       </main>
 
