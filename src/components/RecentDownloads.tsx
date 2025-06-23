@@ -4,6 +4,7 @@ import { Clock, Download, Music, Video, Trash2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
 interface Download {
   id: string;
@@ -21,6 +22,19 @@ interface RecentDownloadsProps {
 }
 
 const RecentDownloads: React.FC<RecentDownloadsProps> = ({ downloads, onClearHistory }) => {
+  const { toast } = useToast();
+
+  const handleDownloadClick = (download: Download) => {
+    // Simulate actual download
+    toast({
+      title: "Download started!",
+      description: `Re-downloading ${download.title}`,
+    });
+    
+    // In a real app, this would trigger the actual download
+    console.log('Downloading:', download);
+  };
+
   if (downloads.length === 0) {
     return (
       <Card className="glassmorphism">
@@ -93,7 +107,12 @@ const RecentDownloads: React.FC<RecentDownloadsProps> = ({ downloads, onClearHis
                 <span>{formatTimeAgo(download.timestamp)}</span>
               </div>
             </div>
-            <Button variant="ghost" size="sm" className="flex-shrink-0">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="flex-shrink-0 hover:bg-primary/10 hover:text-primary transition-colors"
+              onClick={() => handleDownloadClick(download)}
+            >
               <Download className="w-4 h-4" />
             </Button>
           </div>
