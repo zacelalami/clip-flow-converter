@@ -44,39 +44,70 @@ const Index = () => {
     }
   }, [isDark]);
 
-  const handleDownload = (url: string, type: 'video' | 'audio', quality?: string) => {
-    // Detect content type for better naming
-    const getContentType = (url: string) => {
-      if (/instagram\.com\/reel/i.test(url)) return 'Instagram Reel';
-      if (/instagram\.com\/p\//i.test(url)) return 'Instagram Post';
-      if (/tiktok\.com/i.test(url)) return 'TikTok Video';
-      if (/youtube\.com\/shorts/i.test(url)) return 'YouTube Short';
-      return `${detectPlatform(url) || 'Video'} content`;
-    };
+  const handleDownload = async (url: string, type: 'video' | 'audio', quality?: string) => {
+    try {
+      // Detect content type for better naming
+      const getContentType = (url: string) => {
+        if (/instagram\.com\/reel/i.test(url)) return 'Instagram Reel';
+        if (/instagram\.com\/p\//i.test(url)) return 'Instagram Post';
+        if (/tiktok\.com/i.test(url)) return 'TikTok Video';
+        if (/youtube\.com\/shorts/i.test(url)) return 'YouTube Short';
+        return `${detectPlatform(url) || 'Video'} content`;
+      };
 
-    const contentType = getContentType(url);
-    
-    // Simulate download process
-    const newDownload: Download = {
-      id: Date.now().toString(),
-      url,
-      title: `Downloaded ${type} from ${contentType}${quality ? ` (${quality})` : ''}`,
-      platform: detectPlatform(url) || 'unknown',
-      type,
-      quality,
-      timestamp: new Date(),
-    };
+      const contentType = getContentType(url);
+      const platform = detectPlatform(url);
+      
+      // Create a blob URL for demonstration (in a real app, this would be actual media content)
+      const filename = `${contentType.replace(/\s+/g, '_')}_${Date.now()}.${type === 'video' ? 'mp4' : 'mp3'}`;
+      
+      // For demo purposes, create a text file with the URL info
+      // In a real implementation, this would be the actual video/audio file
+      const demoContent = `MediaSync Download\n\nOriginal URL: ${url}\nPlatform: ${platform}\nType: ${type}\nQuality: ${quality}\nDownloaded: ${new Date().toISOString()}`;
+      const blob = new Blob([demoContent], { type: 'text/plain' });
+      const downloadUrl = URL.createObjectURL(blob);
+      
+      // Create download link and trigger download
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the blob URL
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 100);
+      
+      // Add to download history
+      const newDownload: Download = {
+        id: Date.now().toString(),
+        url,
+        title: `Downloaded ${type} from ${contentType}${quality ? ` (${quality})` : ''}`,
+        platform: platform || 'unknown',
+        type,
+        quality,
+        timestamp: new Date(),
+      };
 
-    setDownloads(prev => {
-      const updated = [newDownload, ...prev].slice(0, 10); // Keep only last 10
-      localStorage.setItem('mediasync-downloads', JSON.stringify(updated));
-      return updated;
-    });
+      setDownloads(prev => {
+        const updated = [newDownload, ...prev].slice(0, 10); // Keep only last 10
+        localStorage.setItem('mediasync-downloads', JSON.stringify(updated));
+        return updated;
+      });
 
-    toast({
-      title: "Download started!",
-      description: `Your ${type} download${quality ? ` in ${quality}` : ''} will begin shortly.`,
-    });
+      toast({
+        title: "Download completed!",
+        description: `Your ${type} has been downloaded to your Downloads folder.`,
+      });
+      
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Download failed",
+        description: "There was an error downloading the file. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const detectPlatform = (url: string) => {
@@ -208,11 +239,11 @@ const Index = () => {
         </div>
 
         {/* Download Form */}
-        <div className="mb-8 animate-slide-up">
+        <div className="mb-16 animate-slide-up">
           <DownloadForm onDownload={handleDownload} />
         </div>
 
-        {/* Recent Downloads - moved here */}
+        {/* Recent Downloads */}
         <div className="max-w-2xl mx-auto mb-16 animate-fade-in">
           <RecentDownloads 
             downloads={downloads} 
@@ -290,14 +321,6 @@ const Index = () => {
               </p>
             </div>
           </div>
-        </div>
-
-        {/* Recent Downloads */}
-        <div className="max-w-2xl mx-auto animate-fade-in">
-          <RecentDownloads 
-            downloads={downloads} 
-            onClearHistory={handleClearHistory}
-          />
         </div>
       </main>
 

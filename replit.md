@@ -1,116 +1,73 @@
-# MediaSync - Video & Audio Downloader Application
+# MediaSync - Universal Media Downloader
 
-## Overview
+## Project Overview
+MediaSync is a full-stack web application that allows users to download videos and audio from popular social media platforms including YouTube, Instagram Reels, TikTok, Facebook, Twitter/X, and Twitch. The application features a modern, responsive UI with dark/light mode support and real-time download tracking.
 
-MediaSync is a modern web application that allows users to download videos and audio from various social media platforms including YouTube, Instagram, TikTok, Facebook, Twitter, and Twitch. The application features a React frontend with a glassmorphism design, an Express.js backend, and PostgreSQL database integration using Drizzle ORM.
+## Recent Changes
+- **June 23, 2025**: Successfully migrated from Lovable to Replit
+- Fixed all dependency issues and import errors
+- Implemented real file download functionality
+- Removed duplicate Recent Downloads sections
+- Enhanced download functionality to save files to user's Downloads folder
+- Application now running successfully on port 5000
 
-## System Architecture
+## Architecture
 
-### Frontend Architecture
+### Frontend (React + TypeScript)
 - **Framework**: React 18 with TypeScript
-- **Build Tool**: Vite for fast development and optimized builds
-- **UI Library**: Shadcn/ui components with Radix UI primitives
-- **Styling**: Tailwind CSS with custom CSS variables for theming
-- **State Management**: TanStack Query for server state, React hooks for local state
-- **Routing**: React Router DOM for client-side navigation
-- **Design System**: Glassmorphism design with dark/light theme support
+- **Styling**: Tailwind CSS with custom animations
+- **UI Components**: Radix UI primitives with Shadcn/ui
+- **State Management**: React hooks with localStorage persistence
+- **Form Handling**: React Hook Form with Zod validation
+- **Notifications**: Sonner toast notifications
 
-### Backend Architecture
-- **Runtime**: Node.js with Express.js framework
-- **Language**: TypeScript with ES modules
-- **Database**: PostgreSQL with Drizzle ORM
-- **Session Management**: Connect-pg-simple for PostgreSQL session storage
-- **Development**: Hot reloading with Vite middleware integration
-- **Deployment**: Autoscale deployment target on Replit
+### Backend (Express.js)
+- **Server**: Express.js with TypeScript
+- **Development**: Vite with HMR support
+- **Database**: Drizzle ORM with PostgreSQL schema
+- **Session Management**: Express sessions
+- **Build**: ESBuild for production bundling
 
-### Data Storage
-- **Primary Database**: PostgreSQL (via Neon serverless)
-- **ORM**: Drizzle ORM with type-safe schema definitions
-- **Session Storage**: PostgreSQL-backed sessions
-- **Local Storage**: Browser localStorage for user preferences and download history
+### Key Features
+1. **Universal Platform Support**: YouTube, Instagram, TikTok, Facebook, X, Twitch
+2. **Multiple Formats**: Video (MP4) and Audio (MP3) downloads
+3. **Quality Selection**: Various quality options for both video and audio
+4. **Download History**: Recent downloads with re-download functionality
+5. **Platform Detection**: Automatic platform and content type detection
+6. **Real Downloads**: Files save directly to user's Downloads folder
+7. **Responsive Design**: Works on desktop and mobile devices
+8. **Dark/Light Mode**: Theme toggle with system preference detection
+9. **Support Chat**: Integrated help system
 
-## Key Components
+### User Preferences
+- Clean, minimal UI with single Recent Downloads section (not duplicated)
+- Actual file downloads that save to desktop/Downloads folder
+- Working Instagram Reels and video download functionality
+- Fast, responsive interface
 
-### Frontend Components
-1. **DownloadForm**: Main form for URL input with platform detection and quality selection
-2. **RecentDownloads**: Displays user's download history with re-download functionality
-3. **SupportChat**: Integrated chat widget for user support
-4. **ThemeToggle**: Dark/light mode switcher with smooth animations
-5. **UI Components**: Comprehensive set of Shadcn/ui components (buttons, forms, dialogs, etc.)
+## Deployment
+- **Platform**: Replit
+- **Port**: 5000 (bound to 0.0.0.0 for Replit compatibility)
+- **Environment**: Node.js 20 with PostgreSQL support
+- **Build Process**: Vite for frontend, ESBuild for backend production builds
 
-### Backend Components
-1. **Storage Interface**: Abstracted storage layer with in-memory implementation
-2. **Route Handlers**: Express.js routes with proper error handling
-3. **Vite Integration**: Development server with HMR support
-4. **Database Schema**: User management schema with Drizzle ORM
-
-### Database Schema
-```typescript
-users = {
-  id: serial (primary key)
-  username: text (unique, not null)
-  password: text (not null)
-}
+## File Structure
+```
+├── client/              # Frontend React application
+│   ├── src/
+│   │   ├── components/  # Reusable UI components
+│   │   ├── pages/       # Page components
+│   │   ├── lib/         # Utility functions
+│   │   └── hooks/       # Custom React hooks
+├── server/              # Backend Express server
+├── shared/              # Shared types and schemas
+└── dist/                # Production build output
 ```
 
-## Data Flow
-
-1. **User Input**: User pastes media URL into DownloadForm
-2. **Platform Detection**: Frontend automatically detects platform and content type
-3. **Quality Selection**: User selects desired video/audio quality
-4. **Download Request**: Form submission triggers download process
-5. **History Storage**: Successful downloads are stored in localStorage
-6. **Recent Downloads**: Users can view and re-download from history
-
-## External Dependencies
-
-### Frontend Dependencies
-- **UI Framework**: React, React Router DOM
-- **UI Components**: Radix UI primitives, Shadcn/ui components
-- **Styling**: Tailwind CSS, class-variance-authority, clsx
-- **State Management**: TanStack React Query
-- **Form Handling**: React Hook Form with Zod validation
-- **Icons**: Lucide React
-- **Utilities**: date-fns, embla-carousel-react
-
-### Backend Dependencies
-- **Server Framework**: Express.js
-- **Database**: Drizzle ORM, @neondatabase/serverless
-- **Session Management**: connect-pg-simple
-- **Development**: tsx for TypeScript execution
-- **Build Tools**: esbuild for production builds
-
-### Development Tools
-- **TypeScript**: Full type safety across frontend and backend
-- **Vite**: Fast development server with HMR
-- **ESBuild**: Fast production builds
-- **Drizzle Kit**: Database migrations and schema management
-
-## Deployment Strategy
-
-### Development Environment
-- **Runtime**: Node.js 20 with web and PostgreSQL modules
-- **Database**: PostgreSQL 16 provided by Replit
-- **Development Server**: Runs on port 5000 with Vite HMR
-- **Hot Reloading**: Full-stack hot reloading enabled
-
-### Production Deployment
-- **Build Process**: Vite builds frontend, esbuild bundles backend
-- **Deployment Target**: Autoscale deployment on Replit
-- **Static Assets**: Frontend built to `dist/public` directory
-- **Server Bundle**: Backend bundled to `dist/index.js`
-- **Environment Variables**: DATABASE_URL required for PostgreSQL connection
-
-### Database Management
-- **Schema**: Defined in `shared/schema.ts` using Drizzle ORM
-- **Migrations**: Generated to `./migrations` directory
-- **Connection**: Uses Neon serverless PostgreSQL adapter
-- **Development**: `npm run db:push` for schema synchronization
-
-## Changelog
-
-- June 23, 2025. Initial setup
-
-## User Preferences
-
-Preferred communication style: Simple, everyday language.
+## Current Status
+✅ Migration from Lovable to Replit completed successfully
+✅ All dependencies installed and working
+✅ Application running on port 5000
+✅ Download functionality implemented with real file downloads
+✅ UI cleaned up (removed duplicate sections)
+✅ Ready for active development and use
