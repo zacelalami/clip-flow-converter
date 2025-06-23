@@ -55,23 +55,45 @@ export async function getVideoInfo(url: string): Promise<VideoInfo | null> {
       type: 'api',
       exec: async () => {
         try {
-          const oembedUrl = `https://www.facebook.com/plugins/video/oembed.json/?url=${encodeURIComponent(cleanUrl)}`;
-          const response = await fetch(oembedUrl);
-          if (response.ok) {
-            const data = await response.json();
-            return {
-              title: data.title || "Vidéo Facebook",
-              uploader: data.author_name || "Facebook User",
-              thumbnail: data.thumbnail_url || null,
-              duration: "Durée inconnue",
-              durationSeconds: 0,
-              platform: 'facebook',
-              viewCount: null,
-              uploadDate: null
-            };
+          // Try multiple Facebook oEmbed endpoints
+          const oembedUrls = [
+            `https://www.facebook.com/plugins/video/oembed.json/?url=${encodeURIComponent(cleanUrl)}`,
+            `https://graph.facebook.com/v19.0/oembed_video?url=${encodeURIComponent(cleanUrl)}`
+          ];
+          
+          for (const oembedUrl of oembedUrls) {
+            try {
+              const response = await fetch(oembedUrl);
+              if (response.ok) {
+                const data = await response.json();
+                
+                // Extract thumbnail from HTML if available
+                let thumbnail = data.thumbnail_url;
+                if (!thumbnail && data.html) {
+                  const thumbnailMatch = data.html.match(/src="([^"]*\.jpg[^"]*)"/);
+                  if (thumbnailMatch) {
+                    thumbnail = thumbnailMatch[1];
+                  }
+                }
+                
+                return {
+                  title: data.title || "Vidéo Facebook",
+                  uploader: data.author_name || "Facebook User",
+                  thumbnail: thumbnail || null,
+                  duration: "Durée inconnue",
+                  durationSeconds: 0,
+                  platform: 'facebook',
+                  viewCount: null,
+                  uploadDate: null
+                };
+              }
+            } catch (apiError) {
+              console.log(`Facebook API ${oembedUrl} failed:`, apiError.message);
+              continue;
+            }
           }
         } catch (error) {
-          console.log('Facebook oEmbed failed');
+          console.log('All Facebook oEmbed attempts failed');
         }
         
         // Fallback to basic info

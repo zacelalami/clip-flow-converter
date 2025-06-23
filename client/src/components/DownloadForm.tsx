@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 
 interface DownloadFormProps {
-  onDownload: (url: string, type: 'video' | 'audio', quality?: string) => void;
+  onDownload: (url: string, type: 'video' | 'audio', quality?: string) => Promise<void>;
 }
 
 interface VideoInfo {
@@ -33,6 +33,8 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
   const [detectedContentType, setDetectedContentType] = useState<string | null>(null);
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
   const [isLoadingInfo, setIsLoadingInfo] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -136,7 +138,7 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
     }
   }, [toast]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) {
       toast({
@@ -147,8 +149,20 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
       return;
     }
 
-    const quality = downloadType === 'video' ? videoQuality : audioQuality;
-    onDownload(url, downloadType, quality);
+    if (isDownloading) return;
+
+    setIsDownloading(true);
+    setDownloadProgress('Préparation du téléchargement...');
+    
+    try {
+      const quality = downloadType === 'video' ? videoQuality : audioQuality;
+      await onDownload(url, downloadType, quality);
+    } catch (error) {
+      console.error('Download failed:', error);
+    } finally {
+      setIsDownloading(false);
+      setDownloadProgress('');
+    }
   };
 
   const platformColors = {
@@ -286,11 +300,30 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
           type="submit"
           size="lg"
           className="w-full h-14 text-lg rounded-2xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-300 transform hover:scale-[1.02] animate-pulse-glow"
-          disabled={!url.trim()}
+          disabled={!url.trim() || isDownloading}
         >
-          <Download className="w-5 h-5 mr-2" />
-          Download {downloadType === 'video' ? `Video (${videoQuality})` : `MP3 (${audioQuality})`}
+          {isDownloading ? (
+            <>
+              <div className="w-5 h-5 mr-2 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
+              Téléchargement...
+            </>
+          ) : (
+            <>
+              <Download className="w-5 h-5 mr-2" />
+              Download {downloadType === 'video' ? `Video (${videoQuality})` : `MP3 (${audioQuality})`}
+            </>
+          )}
         </Button>
+        
+        {/* Download Progress */}
+        {isDownloading && downloadProgress && (
+          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+              <div className="w-4 h-4 animate-spin rounded-full border-2 border-blue-500/30 border-t-blue-500"></div>
+              {downloadProgress}
+            </div>
+          </div>
+        )}
       </form>
 
       {/* Video Info Preview */}

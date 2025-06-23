@@ -54,10 +54,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fs.mkdirSync(downloadsDir, { recursive: true });
       }
 
-      // Generate filename
+      // Get video info for smart filename
+      let videoTitle = "download";
+      try {
+        const videoInfoResult = await getVideoInfo(cleanUrl);
+        if (videoInfoResult && videoInfoResult.title) {
+          // Clean title for filename (remove invalid characters)
+          videoTitle = videoInfoResult.title
+            .replace(/[^\w\s-]/g, '')
+            .replace(/\s+/g, '_')
+            .substring(0, 50); // Limit length
+        }
+      } catch (error) {
+        console.log("Could not get video title for filename");
+      }
+
+      // Generate filename with title
       const timestamp = Date.now();
       const extension = type === "video" ? "mp4" : "mp3";
-      const filename = `download_${timestamp}.${extension}`;
+      const filename = `${videoTitle}_${timestamp}.${extension}`;
       const filepath = path.join(downloadsDir, filename);
 
       // Clean URL - remove playlist parameters for single video downloads
@@ -171,18 +186,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw lastError || new Error("All download strategies failed");
       }
 
-      // Check if file was created
-      const actualFiles = fs.readdirSync(downloadsDir).filter(f => f.startsWith(`download_${timestamp}`));
+      // Check if file was created (look for files with our timestamp or title)
+      const possibleFiles = fs.readdirSync(downloadsDir).filter(f => 
+        f.includes(timestamp.toString()) || f.startsWith(videoTitle.substring(0, 20))
+      );
       
-      if (actualFiles.length === 0) {
+      if (possibleFiles.length === 0) {
         return res.status(500).json({ error: "Download failed - no file created" });
       }
 
-      const actualFilepath = path.join(downloadsDir, actualFiles[0]);
-      const actualFilename = actualFiles[0];
+      const actualFilepath = path.join(downloadsDir, possibleFiles[0]);
 
-      // Send file for download
-      res.download(actualFilepath, actualFilename, (err) => {
+      // Send file for download with smart filename
+      res.download(actualFilepath, filename, (err) => {
         if (err) {
           console.error("Download error:", err);
           if (!res.headersSent) {

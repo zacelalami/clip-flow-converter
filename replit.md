@@ -23,6 +23,9 @@ MediaSync is a full-stack web application that allows users to download videos a
 - Created unified platform-info module supporting Facebook, Instagram, TikTok, Twitter, Twitch
 - Improved video info extraction with platform-specific strategies and yt-dlp fallbacks
 - Enhanced download reliability with exponential retry and better user agents
+- Added download progress indicators and loading states for better UX
+- Implemented smart filename generation using video titles
+- Enhanced Facebook thumbnail extraction with multiple API approaches
 
 ## Architecture
 
