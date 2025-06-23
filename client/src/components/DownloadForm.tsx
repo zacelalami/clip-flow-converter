@@ -240,9 +240,20 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
         </Button>
       </form>
 
-      <div className="text-center text-sm text-muted-foreground">
+      <div className="text-center text-sm text-muted-foreground space-y-2">
         <p>Supported: YouTube, Instagram Reels & Posts, TikTok, Facebook, X (Twitter), Twitch</p>
-        <p className="text-xs mt-1">Perfect for downloading Instagram Reels, TikTok videos, and converting to MP3</p>
+        <p className="text-xs">Perfect for downloading Instagram Reels, TikTok videos, and converting to MP3</p>
+        <div className="flex flex-wrap justify-center gap-2 mt-3">
+          <span className="text-xs bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">
+            ✓ Instagram Reels
+          </span>
+          <span className="text-xs bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">
+            ✓ TikTok Videos
+          </span>
+          <span className="text-xs bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded-full">
+            ⚠ YouTube (some protected)
+          </span>
+        </div>
       </div>
     </div>
   );
