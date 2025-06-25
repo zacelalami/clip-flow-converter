@@ -1,0 +1,182 @@
+import yt_dlp
+import subprocess
+import os
+import tempfile
+from pathlib import Path
+
+class SmartYouTubeDownloader:
+    def __init__(self):
+        self.temp_dir = tempfile.mkdtemp()
+    
+    def download_video_and_convert_to_mp3(self, url, quality='320'):
+        """
+        Télécharge la vidéo YouTube et la convertit en MP3
+        Contourne les protections anti-bot MP3
+        """
+        try:
+            # Configuration pour télécharger la vidéo (fonctionne)
+            video_opts = {
+                'format': 'best[height<=720]/best',  # Vidéo de qualité correcte
+                'outtmpl': os.path.join(self.temp_dir, '%(title)s.%(ext)s'),
+                'extractaudio': False,  # On télécharge la vidéo complète
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                }
+            }
+            
+            print("📹 Téléchargement de la vidéo YouTube...")
+            with yt_dlp.YoutubeDL(video_opts) as ydl:
+                # Récupère les infos de la vidéo
+                info = ydl.extract_info(url, download=False)
+                video_title = info['title']
+                
+                # Télécharge la vidéo
+                ydl.download([url])
+                
+                # Trouve le fichier vidéo téléchargé
+                video_files = list(Path(self.temp_dir).glob(f"{video_title}.*"))
+                if not video_files:
+                    raise Exception("Vidéo non trouvée après téléchargement")
+                
+                video_path = str(video_files[0])
+                
+            print("🎵 Conversion en MP3...")
+            mp3_path = self.convert_to_mp3(video_path, quality)
+            
+            # Nettoie le fichier vidéo temporaire
+            os.remove(video_path)
+            
+            return {
+                'success': True,
+                'file_path': mp3_path,
+                'title': video_title,
+                'message': '✅ MP3 créé avec succès via conversion vidéo'
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'message': '❌ Erreur lors du téléchargement/conversion'
+            }
+    
+    def convert_to_mp3(self, video_path, quality='320'):
+        """Convertit une vidéo en MP3 avec ffmpeg"""
+        video_name = Path(video_path).stem
+        mp3_path = os.path.join(self.temp_dir, f"{video_name}.mp3")
+        
+        # Commande ffmpeg pour extraction audio
+        cmd = [
+            'ffmpeg', '-i', video_path,
+            '-vn',  # Pas de vidéo
+            '-acodec', 'mp3',  # Codec MP3
+            '-ab', f'{quality}k',  # Bitrate
+            '-ar', '44100',  # Fréquence d'échantillonnage
+            '-y',  # Écraser si existe
+            mp3_path
+        ]
+        
+        try:
+            subprocess.run(cmd, check=True, capture_output=True)
+            return mp3_path
+        except subprocess.CalledProcessError as e:
+            # Fallback avec une commande plus simple
+            simple_cmd = ['ffmpeg', '-i', video_path, '-q:a', '0', '-map', 'a', mp3_path, '-y']
+            subprocess.run(simple_cmd, check=True)
+            return mp3_path
+    
+    def smart_download(self, url, format_type='mp3', quality='320'):
+        """
+        Fonction principale qui gère intelligemment les téléchargements
+        """
+        if 'youtube.com' in url or 'youtu.be' in url:
+            if format_type == 'mp3':
+                # Pour YouTube MP3, utilise la méthode vidéo + conversion
+                print("🔄 YouTube MP3 détecté - Utilisation de la méthode alternative...")
+                return self.download_video_and_convert_to_mp3(url, quality)
+            else:
+                # Pour YouTube vidéo, méthode classique (fonctionne)
+                return self.download_youtube_video(url)
+        else:
+            # Pour autres plateformes (TikTok, etc.), méthode classique
+            return self.download_other_platform(url, format_type)
+    
+    def download_youtube_video(self, url):
+        """Téléchargement vidéo YouTube classique (fonctionne bien)"""
+        video_opts = {
+            'format': 'best[height<=720]/best',
+            'outtmpl': os.path.join(self.temp_dir, '%(title)s.%(ext)s'),
+        }
+        
+        try:
+            with yt_dlp.YoutubeDL(video_opts) as ydl:
+                ydl.download([url])
+            return {'success': True, 'message': '✅ Vidéo YouTube téléchargée'}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def download_other_platform(self, url, format_type):
+        """Téléchargement pour TikTok, Instagram, etc."""
+        opts = {
+            'format': 'best' if format_type == 'video' else 'bestaudio/best',
+            'outtmpl': os.path.join(self.temp_dir, '%(title)s.%(ext)s'),
+        }
+        
+        if format_type == 'mp3':
+            opts.update({
+                'extractaudio': True,
+                'audioformat': 'mp3',
+                'audioquality': '320K',
+            })
+        
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                ydl.download([url])
+            return {'success': True, 'message': f'✅ {format_type.upper()} téléchargé'}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+# Exemple d'utilisation
+def example_usage():
+    downloader = SmartYouTubeDownloader()
+    
+    # Test avec YouTube MP3 (utilise la méthode alternative)
+    youtube_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    result = downloader.smart_download(youtube_url, 'mp3', '320')
+    print(result)
+    
+    # Test avec YouTube vidéo (méthode classique)
+    video_result = downloader.smart_download(youtube_url, 'video')
+    print(video_result)
+
+# Interface Flask intégrée
+from flask import Flask, request, jsonify, send_file
+
+app = Flask(__name__)
+downloader = SmartYouTubeDownloader()
+
+@app.route('/download', methods=['POST'])
+def download_endpoint():
+    data = request.json
+    url = data.get('url')
+    format_type = data.get('format', 'mp3')
+    quality = data.get('quality', '320')
+    
+    result = downloader.smart_download(url, format_type, quality)
+    
+    if result['success']:
+        # Retourne le fichier ou un lien de téléchargement
+        return jsonify({
+            'success': True,
+            'message': result['message'],
+            'download_ready': True
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'message': result.get('message', 'Erreur de téléchargement'),
+            'error': result.get('error')
+        }), 400
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080, debug=True)

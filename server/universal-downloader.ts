@@ -339,6 +339,116 @@ export class MediaDownloader {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  private static async downloadYouTubeVideoAndConvertToMp3(url: string, outputPath: string, quality: string): Promise<DownloadResult> {
+    console.log("🔄 YouTube MP3 detected - Using video-to-MP3 conversion method...");
+    
+    const tempVideoPath = outputPath.replace('.mp3', '_temp_video.mp4');
+    const cleanUrl = url.split('&list=')[0].split('&index=')[0];
+    
+    try {
+      // Step 1: Download YouTube video (this works perfectly)
+      console.log("📹 Downloading YouTube video...");
+      const baseOptions = '--no-check-certificate --no-playlist --max-filesize 100M --no-warnings';
+      const videoCommand = `yt-dlp ${baseOptions} --socket-timeout 20 --concurrent-fragments 4 --extractor-args "youtube:player_client=android,youtube:skip=dash,youtube:skip=hls" -f "best[height<=720]/18/mp4/worst" -o "${tempVideoPath}" "${cleanUrl}"`;
+      
+      await this.executeCommand(videoCommand);
+      
+      if (!this.verifyDownload(tempVideoPath)) {
+        throw new Error("Video download failed or file too small");
+      }
+      
+      console.log("🎵 Converting video to MP3...");
+      
+      // Step 2: Convert video to MP3 using ffmpeg
+      await this.convertVideoToMp3(tempVideoPath, outputPath, quality);
+      
+      // Step 3: Verify MP3 was created
+      if (!this.verifyDownload(outputPath)) {
+        throw new Error("MP3 conversion failed");
+      }
+      
+      // Step 4: Clean up temporary video file
+      this.cleanup(tempVideoPath);
+      
+      console.log("✅ YouTube MP3 created successfully via video conversion");
+      return {
+        success: true,
+        filepath: outputPath,
+        platform: 'youtube'
+      };
+      
+    } catch (error) {
+      console.log(`Video-to-MP3 conversion failed: ${error}`);
+      this.cleanup(tempVideoPath);
+      this.cleanup(outputPath);
+      
+      return {
+        success: false,
+        error: "YouTube MP3 conversion failed. Video download or ffmpeg conversion error.",
+        platform: 'youtube'
+      };
+    }
+  }
+
+  private static async convertVideoToMp3(videoPath: string, mp3Path: string, quality: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Determine bitrate from quality
+      let bitrate = '128k';
+      if (quality.includes('320')) bitrate = '320k';
+      else if (quality.includes('256')) bitrate = '256k';
+      else if (quality.includes('192')) bitrate = '192k';
+      else if (quality.includes('96')) bitrate = '96k';
+      
+      // Primary ffmpeg command
+      const ffmpegArgs = [
+        '-i', videoPath,
+        '-vn', // No video
+        '-acodec', 'mp3', // MP3 codec
+        '-ab', bitrate, // Audio bitrate
+        '-ar', '44100', // Sample rate
+        '-y', // Overwrite if exists
+        mp3Path
+      ];
+      
+      const ffmpeg = spawn('ffmpeg', ffmpegArgs);
+      
+      let stderr = '';
+      
+      ffmpeg.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+      
+      ffmpeg.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          // Fallback with simpler command
+          console.log("Trying fallback ffmpeg command...");
+          const fallbackArgs = ['-i', videoPath, '-q:a', '0', '-map', 'a', mp3Path, '-y'];
+          const fallbackFfmpeg = spawn('ffmpeg', fallbackArgs);
+          
+          fallbackFfmpeg.on('close', (fallbackCode) => {
+            if (fallbackCode === 0) {
+              resolve();
+            } else {
+              reject(new Error(`ffmpeg conversion failed: ${stderr}`));
+            }
+          });
+        }
+      });
+      
+      ffmpeg.on('error', (error) => {
+        reject(new Error(`ffmpeg spawn error: ${error.message}`));
+      });
+      
+      // Set timeout for conversion
+      setTimeout(() => {
+        ffmpeg.kill();
+        reject(new Error('ffmpeg conversion timeout'));
+      }, 60000); // 60 second timeout
+    });
+  }
+
   // Get video metadata
   static async getMetadata(url: string): Promise<VideoMetadata | null> {
     const platform = this.detectPlatform(url);
