@@ -340,46 +340,71 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
       )}
 
       {videoInfo && !isLoadingInfo && (
-        <div className="mt-4 p-4 bg-gradient-to-r from-primary/5 to-secondary/5 rounded-lg border border-primary/20">
-          <div className="flex items-start gap-3">
-            {videoInfo.thumbnail && (
-              <div className="flex-shrink-0">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-6 p-4 bg-muted/50 rounded-xl border"
+        >
+          <div className="flex gap-4">
+            {videoInfo.thumbnail ? (
+              <div className="w-24 h-24 flex-shrink-0">
                 <img
                   src={videoInfo.thumbnail}
-                  alt="Video thumbnail"
-                  className="w-24 h-16 object-cover rounded-lg border"
+                  alt={videoInfo.title}
+                  className="w-full h-full object-cover rounded-lg"
                   onError={(e) => {
-                    e.currentTarget.style.display = 'none';
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const fallback = target.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
                   }}
                 />
+                <div className="w-full h-full bg-muted rounded-lg items-center justify-center hidden">
+                  <Globe className="w-8 h-8 text-muted-foreground" />
+                </div>
+              </div>
+            ) : (
+              <div className="w-24 h-24 bg-muted rounded-lg flex-shrink-0 flex items-center justify-center">
+                {videoInfo.platform === 'youtube' && <span className="text-2xl">📹</span>}
+                {videoInfo.platform === 'tiktok' && <span className="text-2xl">🎵</span>}
+                {videoInfo.platform === 'instagram' && <span className="text-2xl">📸</span>}
+                {videoInfo.platform === 'facebook' && <span className="text-2xl">👥</span>}
+                {!['youtube', 'tiktok', 'instagram', 'facebook'].includes(videoInfo.platform) && (
+                  <Globe className="w-8 h-8 text-muted-foreground" />
+                )}
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-sm line-clamp-2 mb-1">
-                {videoInfo.title}
-              </h3>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {videoInfo.duration}
-                </span>
-                <span>•</span>
-                <span>{videoInfo.uploader}</span>
+              <h3 className="font-semibold text-lg mb-2 line-clamp-2">{videoInfo.title}</h3>
+              <div className="space-y-1 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  <span>{videoInfo.duration}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  <span>{videoInfo.uploader}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
+                  <span className="capitalize">
+                    {videoInfo.platform === 'youtube' && '📹 YouTube'}
+                    {videoInfo.platform === 'tiktok' && '🎵 TikTok'}
+                    {videoInfo.platform === 'instagram' && '📸 Instagram'}
+                    {videoInfo.platform === 'facebook' && '👥 Facebook'}
+                    {!['youtube', 'tiktok', 'instagram', 'facebook'].includes(videoInfo.platform) && videoInfo.platform}
+                  </span>
+                </div>
                 {videoInfo.viewCount && (
-                  <>
-                    <span>•</span>
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4" />
                     <span>{videoInfo.viewCount.toLocaleString()} vues</span>
-                  </>
+                  </div>
                 )}
-              </div>
-              <div className="mt-1">
-                <Badge variant="outline" className="text-xs">
-                  {videoInfo.platform.toUpperCase()}
-                </Badge>
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
 
       <div className="text-center text-sm text-muted-foreground space-y-2">

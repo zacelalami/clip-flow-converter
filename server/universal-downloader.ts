@@ -448,85 +448,111 @@ export class MediaDownloader {
     }
   }
 
-  // Get video metadata
+  // Get video metadata with platform-specific strategies
   static async getMetadata(url: string): Promise<VideoMetadata | null> {
     const platform = this.detectPlatform(url);
+    console.log(`Getting metadata for ${platform} (enhanced strategy)...`);
     
-    // Try to get metadata for all platforms now
+    const userAgents = [
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    ];
+    const randomUA = userAgents[Math.floor(Math.random() * userAgents.length)];
     
-    try {
-      // Fast metadata extraction using the same strategies that work for downloads
-      const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1];
+    let strategies: string[] = [];
+    
+    // Platform-specific metadata extraction strategies
+    if (platform === 'youtube') {
       const cleanUrl = url.split('&list=')[0].split('&index=')[0];
-      
-      const strategies = [
+      strategies = [
         `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 8 --extractor-args "youtube:player_client=android" "${cleanUrl}"`,
-        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 8 --concurrent-fragments 2 --extractor-args "youtube:player_client=android" "${cleanUrl}"`,
-        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 10 --user-agent "Mozilla/5.0 (Android 12; Mobile; rv:68.0) Gecko/68.0 Firefox/122.0" "${cleanUrl}"`
+        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 10 --user-agent "${randomUA}" "${cleanUrl}"`
       ];
-      
-      for (const command of strategies) {
-        try {
-          console.log(`Getting metadata for ${platform} (fast strategy)...`);
-          const { stdout } = await execAsync(command, { timeout: 12000 });
-          const data = JSON.parse(stdout.trim());
-          
-          // Extract best thumbnail
-          let thumbnail = null;
-          if (data.thumbnails && Array.isArray(data.thumbnails)) {
-            const validThumbnails = data.thumbnails.filter(t => t.url && t.width);
-            if (validThumbnails.length > 0) {
-              // Get medium quality thumbnail for faster loading
-              const mediumThumbnail = validThumbnails.find(t => t.width >= 320 && t.width <= 640);
-              thumbnail = mediumThumbnail ? mediumThumbnail.url : validThumbnails[0].url;
-            }
-          } else if (data.thumbnail) {
-            thumbnail = data.thumbnail;
-          }
-          
-          return {
-            title: data.title || data.alt_title || `${platform} Video`,
-            uploader: data.uploader || data.channel || data.creator || `${platform} User`,
-            thumbnail: thumbnail,
-            duration: this.formatDuration(data.duration),
-            durationSeconds: data.duration || 0,
-            platform: platform,
-            viewCount: data.view_count || null,
-            uploadDate: data.upload_date || null
-          };
-        } catch (strategyError) {
-          console.log(`Metadata strategy failed: ${strategyError.message}`);
-          continue;
-        }
-      }
-      
-      // Fallback if all strategies fail
-      return {
-        title: `${platform.charAt(0).toUpperCase() + platform.slice(1)} Video`,
-        uploader: `${platform.charAt(0).toUpperCase() + platform.slice(1)} User`,
-        thumbnail: null,
-        duration: "Durée inconnue",
-        durationSeconds: 0,
-        platform: platform,
-        viewCount: null,
-        uploadDate: null
-      };
-      
-    } catch (error) {
-      console.log(`Failed to get metadata for ${platform}: ${error.message}`);
-      
-      // Return basic metadata
-      return {
-        title: `${platform.charAt(0).toUpperCase() + platform.slice(1)} Video`,
-        uploader: `${platform.charAt(0).toUpperCase() + platform.slice(1)} User`,
-        thumbnail: null,
-        duration: "Durée inconnue",
-        durationSeconds: 0,
-        platform: platform,
-        viewCount: null,
-        uploadDate: null
-      };
+    } else if (platform === 'tiktok') {
+      strategies = [
+        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 12 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" "${url}"`,
+        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 10 --user-agent "${randomUA}" "${url}"`,
+        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 15 --extractor-retries 2 "${url}"`
+      ];
+    } else if (platform === 'instagram') {
+      strategies = [
+        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 12 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" "${url}"`,
+        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 10 --user-agent "${randomUA}" "${url}"`
+      ];
+    } else if (platform === 'facebook') {
+      strategies = [
+        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 12 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" "${url}"`,
+        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 10 --user-agent "${randomUA}" "${url}"`
+      ];
+    } else {
+      strategies = [
+        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 10 --user-agent "${randomUA}" "${url}"`
+      ];
     }
+    
+    for (const command of strategies) {
+      try {
+        console.log(`Getting metadata for ${platform} (enhanced strategy)...`);
+        const { stdout } = await execAsync(command, { timeout: 15000 });
+        const data = JSON.parse(stdout.trim());
+        
+        // Enhanced thumbnail extraction with platform-specific logic
+        let thumbnail = null;
+        
+        if (data.thumbnails && Array.isArray(data.thumbnails) && data.thumbnails.length > 0) {
+          const validThumbnails = data.thumbnails.filter(t => t.url);
+          
+          if (platform === 'tiktok') {
+            // TikTok: prefer specific thumbnail types
+            thumbnail = validThumbnails.find(t => t.preference === 0)?.url ||
+                       validThumbnails.find(t => t.width && t.width >= 150)?.url ||
+                       validThumbnails[validThumbnails.length - 1]?.url;
+          } else if (platform === 'instagram') {
+            // Instagram: prefer medium-high quality
+            thumbnail = validThumbnails.find(t => t.width && t.width >= 300)?.url ||
+                       validThumbnails[Math.floor(validThumbnails.length / 2)]?.url ||
+                       validThumbnails[0]?.url;
+          } else if (platform === 'facebook') {
+            // Facebook: prefer any working thumbnail
+            thumbnail = validThumbnails.find(t => t.width && t.width >= 200)?.url ||
+                       validThumbnails[0]?.url;
+          } else {
+            // YouTube and others: prefer medium quality
+            const mediumThumbnail = validThumbnails.find(t => t.width >= 320 && t.width <= 640);
+            thumbnail = mediumThumbnail ? mediumThumbnail.url : validThumbnails[0]?.url;
+          }
+        } else if (data.thumbnail) {
+          thumbnail = data.thumbnail;
+        }
+        
+        return {
+          title: data.title || data.alt_title || `${platform} Video`,
+          uploader: data.uploader || data.channel || data.creator || data.uploader_id || `${platform} User`,
+          thumbnail: thumbnail,
+          duration: this.formatDuration(data.duration),
+          durationSeconds: data.duration || 0,
+          platform: platform,
+          viewCount: data.view_count || null,
+          uploadDate: data.upload_date || null
+        };
+      } catch (strategyError) {
+        console.log(`Metadata strategy failed: ${strategyError.message}`);
+        continue;
+      }
+    }
+    
+    // Return basic fallback metadata
+    return {
+      title: `${platform.charAt(0).toUpperCase() + platform.slice(1)} Video`,
+      uploader: `${platform.charAt(0).toUpperCase() + platform.slice(1)} User`,
+      thumbnail: null,
+      duration: "Durée inconnue",
+      durationSeconds: 0,
+      platform: platform,
+      viewCount: null,
+      uploadDate: null
+    };
   }
 
   private static formatDuration(seconds: number | null): string {
