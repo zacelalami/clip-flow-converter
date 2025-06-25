@@ -123,5 +123,5 @@ export async function downloadYouTubeAdvanced(url: string, type: 'video' | 'audi
   }
 
   console.log("All advanced YouTube strategies failed");
-  throw new Error("YouTube a activé des protections anti-bot très strictes. Essayez dans quelques minutes ou utilisez d'autres plateformes.");
+  throw new Error("Toutes les stratégies YouTube ont échoué. Réessayez dans quelques minutes.");
 }

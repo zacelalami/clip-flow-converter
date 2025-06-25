@@ -10,7 +10,6 @@ import { downloadYouTubeVideo, getYouTubeInfo } from "./youtube-bypass";
 import { downloadYouTubeAdvanced } from "./youtube-advanced";
 import { getVideoInfo } from "./platform-info";
 import { downloadFacebookVideo } from "./facebook-bypass";
-import { analyzeYouTubeFailure, suggestAlternativePlatforms } from "./youtube-ai-assistant";
 
 const execAsync = promisify(exec);
 
@@ -176,25 +175,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             } catch (advancedError) {
               console.log("YouTube advanced bypass failed:", advancedError.message);
               lastError = advancedError;
-              
-              // Strategy 4: AI-powered analysis and suggestions
-              try {
-                console.log("All YouTube strategies failed, using AI analysis...");
-                const videoInfo = await getVideoInfo(cleanUrl);
-                const aiAnalysis = await analyzeYouTubeFailure(cleanUrl, advancedError.message);
-                const alternatives = await suggestAlternativePlatforms(videoInfo?.title);
-                
-                return res.status(503).json({ 
-                  error: aiAnalysis.analysis,
-                  aiSuggestions: aiAnalysis.suggestions,
-                  alternativeMethod: aiAnalysis.alternativeMethod,
-                  alternativePlatforms: alternatives,
-                  videoTitle: videoInfo?.title || "Vidéo YouTube",
-                  isYouTubeBlocked: true
-                });
-              } catch (aiError) {
-                console.log("AI analysis failed:", aiError.message);
-              }
             }
           }
         } else if (detectedPlatform === 'facebook') {
@@ -305,23 +285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else if (error.message.includes("timeout") || error.message.includes("TIMEOUT")) {
           res.status(408).json({ error: "Délai d'attente dépassé. La vidéo est peut-être trop volumineuse." });
         } else if (error.message.includes("Sign in to confirm") || error.message.includes("bot")) {
-          // Use AI assistant for YouTube failures
-          try {
-            const videoInfo = await getVideoInfo(cleanUrl);
-            const aiAnalysis = await analyzeYouTubeFailure(cleanUrl, error.message);
-            const alternatives = await suggestAlternativePlatforms(videoInfo?.title);
-            
-            res.status(429).json({ 
-              error: aiAnalysis.analysis,
-              aiSuggestions: aiAnalysis.suggestions,
-              alternativeMethod: aiAnalysis.alternativeMethod,
-              alternativePlatforms: alternatives,
-              videoTitle: videoInfo?.title || "Vidéo YouTube",
-              isYouTubeBlocked: true
-            });
-          } catch (aiError) {
-            res.status(429).json({ error: "Protection anti-bot YouTube activée. En mode public, YouTube bloque temporairement les téléchargements. Utilisez Instagram, TikTok ou autres plateformes qui fonctionnent parfaitement." });
-          }
+          res.status(429).json({ error: "Protection anti-bot YouTube activée. Essayez dans quelques minutes ou utilisez Instagram, TikTok et autres plateformes qui fonctionnent parfaitement." });
         } else {
           res.status(500).json({ error: "Échec du téléchargement. Cette vidéo pourrait être protégée ou indisponible." });
         }
