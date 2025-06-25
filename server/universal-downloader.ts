@@ -408,62 +408,44 @@ export class MediaDownloader {
   }
 
   private static async convertVideoToMp3(videoPath: string, mp3Path: string, quality: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // Determine bitrate from quality
-      let bitrate = '128k';
-      if (quality.includes('320')) bitrate = '320k';
-      else if (quality.includes('256')) bitrate = '256k';
-      else if (quality.includes('192')) bitrate = '192k';
-      else if (quality.includes('96')) bitrate = '96k';
+    // Determine bitrate from quality
+    let bitrate = '128k';
+    if (quality.includes('320')) bitrate = '320k';
+    else if (quality.includes('256')) bitrate = '256k';
+    else if (quality.includes('192')) bitrate = '192k';
+    else if (quality.includes('96')) bitrate = '96k';
+    
+    // Multiple ffmpeg strategies based on your robust solution
+    const ffmpegCommands = [
+      // Optimal command
+      `ffmpeg -i "${videoPath}" -vn -acodec libmp3lame -ab ${bitrate} -ar 44100 -f mp3 -y "${mp3Path}"`,
+      // Alternative command
+      `ffmpeg -i "${videoPath}" -q:a 0 -map a -y "${mp3Path}"`,
+      // Basic command
+      `ffmpeg -i "${videoPath}" -vn -acodec mp3 -y "${mp3Path}"`
+    ];
+    
+    for (let i = 0; i < ffmpegCommands.length; i++) {
+      const command = ffmpegCommands[i];
+      console.log(`Trying ffmpeg strategy ${i + 1}/${ffmpegCommands.length}...`);
       
-      // Primary ffmpeg command
-      const ffmpegArgs = [
-        '-i', videoPath,
-        '-vn', // No video
-        '-acodec', 'mp3', // MP3 codec
-        '-ab', bitrate, // Audio bitrate
-        '-ar', '44100', // Sample rate
-        '-y', // Overwrite if exists
-        mp3Path
-      ];
-      
-      const ffmpeg = spawn('ffmpeg', ffmpegArgs);
-      
-      let stderr = '';
-      
-      ffmpeg.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
-      
-      ffmpeg.on('close', (code) => {
-        if (code === 0) {
-          resolve();
-        } else {
-          // Fallback with simpler command
-          console.log("Trying fallback ffmpeg command...");
-          const fallbackArgs = ['-i', videoPath, '-q:a', '0', '-map', 'a', mp3Path, '-y'];
-          const fallbackFfmpeg = spawn('ffmpeg', fallbackArgs);
-          
-          fallbackFfmpeg.on('close', (fallbackCode) => {
-            if (fallbackCode === 0) {
-              resolve();
-            } else {
-              reject(new Error(`ffmpeg conversion failed: ${stderr}`));
-            }
-          });
+      try {
+        await execAsync(command, { timeout: 300000 }); // 5 minutes timeout
+        
+        // Verify MP3 file was created and has content
+        if (this.verifyDownload(mp3Path)) {
+          console.log(`MP3 conversion successful with strategy ${i + 1}`);
+          return;
         }
-      });
-      
-      ffmpeg.on('error', (error) => {
-        reject(new Error(`ffmpeg spawn error: ${error.message}`));
-      });
-      
-      // Set timeout for conversion
-      setTimeout(() => {
-        ffmpeg.kill();
-        reject(new Error('ffmpeg conversion timeout'));
-      }, 60000); // 60 second timeout
-    });
+      } catch (error) {
+        console.log(`ffmpeg strategy ${i + 1} failed: ${error.message}`);
+        this.cleanup(mp3Path); // Clean up any partial file
+        
+        if (i === ffmpegCommands.length - 1) {
+          throw new Error(`All ffmpeg conversion strategies failed: ${error.message}`);
+        }
+      }
+    }
   }
 
   // Get video metadata

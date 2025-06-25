@@ -1,0 +1,305 @@
+import yt_dlp
+import subprocess
+import os
+import tempfile
+import shutil
+from pathlib import Path
+import re
+import logging
+
+class SmartYouTubeDownloader:
+    def __init__(self, output_dir="downloads"):
+        """
+        Initialise le téléchargeur intelligent
+        Args:
+            output_dir: Dossier de sortie pour les fichiers téléchargés
+        """
+        self.temp_dir = tempfile.mkdtemp()
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(exist_ok=True)
+        
+        # Configuration du logging
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        self.logger = logging.getLogger(__name__)
+        
+        # Vérification des dépendances
+        self._check_dependencies()
+    
+    def _check_dependencies(self):
+        """Vérifie que ffmpeg est disponible"""
+        try:
+            subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True)
+            self.logger.info("✅ ffmpeg détecté")
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            self.logger.warning("⚠️ ffmpeg non trouvé - conversion MP3 limitée")
+    
+    def _sanitize_filename(self, filename):
+        """Nettoie le nom de fichier pour éviter les caractères problématiques"""
+        # Supprime les caractères spéciaux
+        filename = re.sub(r'[<>:"/\\|?*]', '', filename)
+        # Limite la longueur
+        if len(filename) > 200:
+            filename = filename[:200]
+        return filename.strip()
+    
+    def download_video_and_convert_to_mp3(self, url, quality='320'):
+        """
+        Télécharge la vidéo YouTube et la convertit en MP3
+        Méthode robuste qui contourne les restrictions
+        """
+        try:
+            # Configuration pour télécharger la vidéo
+            video_opts = {
+                'format': 'best[ext=mp4][height<=720]/best[height<=720]/best',
+                'outtmpl': os.path.join(self.temp_dir, '%(title)s.%(ext)s'),
+                'extractaudio': False,
+                'writeinfojson': False,
+                'writeautomaticsub': False,
+                'writesubtitles': False,
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                },
+                'extractor_retries': 3,
+                'fragment_retries': 3,
+                'skip_unavailable_fragments': True,
+            }
+            
+            self.logger.info("📹 Extraction des informations vidéo...")
+            with yt_dlp.YoutubeDL(video_opts) as ydl:
+                # Récupère les infos de la vidéo
+                info = ydl.extract_info(url, download=False)
+                video_title = self._sanitize_filename(info['title'])
+                duration = info.get('duration', 0)
+                
+                # Vérification de la durée (limite pour éviter les fichiers trop lourds)
+                if duration > 3600:  # 1 heure
+                    return {
+                        'success': False,
+                        'error': 'Vidéo trop longue (> 1h)',
+                        'message': '❌ Vidéo trop longue pour le traitement'
+                    }
+                
+                self.logger.info(f"📥 Téléchargement: {video_title}")
+                # Télécharge la vidéo
+                ydl.download([url])
+                
+                # Trouve le fichier vidéo téléchargé
+                video_files = list(Path(self.temp_dir).glob(f"{video_title}.*"))
+                if not video_files:
+                    # Recherche alternative si le nom exact ne correspond pas
+                    video_files = [f for f in Path(self.temp_dir).iterdir() if f.is_file() and f.suffix in ['.mp4', '.webm', '.mkv']]
+                
+                if not video_files:
+                    raise Exception("Aucun fichier vidéo trouvé après téléchargement")
+                
+                video_path = str(video_files[0])
+                
+            self.logger.info("🎵 Conversion en MP3...")
+            mp3_path = self._convert_to_mp3(video_path, video_title, quality)
+            
+            # Déplace le fichier MP3 vers le dossier de sortie
+            final_mp3_path = self.output_dir / f"{video_title}.mp3"
+            shutil.move(mp3_path, final_mp3_path)
+            
+            # Nettoie le fichier vidéo temporaire
+            try:
+                os.remove(video_path)
+            except:
+                pass
+            
+            return {
+                'success': True,
+                'file_path': str(final_mp3_path),
+                'title': video_title,
+                'message': '✅ MP3 créé avec succès via conversion vidéo',
+                'duration': duration
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Erreur: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'message': '❌ Erreur lors du téléchargement/conversion'
+            }
+    
+    def _convert_to_mp3(self, video_path, title, quality='320'):
+        """Convertit une vidéo en MP3 avec ffmpeg"""
+        mp3_path = os.path.join(self.temp_dir, f"{title}.mp3")
+        
+        # Commandes ffmpeg par ordre de préférence
+        commands = [
+            # Commande optimale
+            [
+                'ffmpeg', '-i', video_path,
+                '-vn', '-acodec', 'libmp3lame',
+                '-ab', f'{quality}k', '-ar', '44100',
+                '-f', 'mp3', '-y', mp3_path
+            ],
+            # Commande alternative
+            [
+                'ffmpeg', '-i', video_path,
+                '-q:a', '0', '-map', 'a',
+                '-y', mp3_path
+            ],
+            # Commande de base
+            [
+                'ffmpeg', '-i', video_path,
+                '-vn', '-acodec', 'mp3',
+                '-y', mp3_path
+            ]
+        ]
+        
+        for cmd in commands:
+            try:
+                result = subprocess.run(
+                    cmd, 
+                    check=True, 
+                    capture_output=True,
+                    timeout=300  # 5 minutes max
+                )
+                if os.path.exists(mp3_path) and os.path.getsize(mp3_path) > 0:
+                    return mp3_path
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+                self.logger.warning(f"Commande ffmpeg échouée: {' '.join(cmd[:3])}")
+                continue
+        
+        raise Exception("Toutes les tentatives de conversion ffmpeg ont échoué")
+    
+    def download_direct_mp3(self, url, quality='320'):
+        """
+        Tentative de téléchargement MP3 direct (peut échouer sur YouTube)
+        Utilisé comme fallback ou pour d'autres plateformes
+        """
+        try:
+            audio_opts = {
+                'format': 'bestaudio[ext=m4a]/bestaudio/best',
+                'outtmpl': os.path.join(str(self.output_dir), '%(title)s.%(ext)s'),
+                'extractaudio': True,
+                'audioformat': 'mp3',
+                'audioquality': quality,
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                }
+            }
+            
+            with yt_dlp.YoutubeDL(audio_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                title = self._sanitize_filename(info['title'])
+                ydl.download([url])
+                
+                return {
+                    'success': True,
+                    'title': title,
+                    'message': '✅ MP3 téléchargé directement'
+                }
+                
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'message': '❌ Téléchargement MP3 direct échoué'
+            }
+    
+    def smart_download(self, url, format_type='mp3', quality='320'):
+        """
+        Fonction principale qui gère intelligemment les téléchargements
+        """
+        self.logger.info(f"🚀 Début du téléchargement: {url}")
+        
+        if format_type == 'mp3':
+            if 'youtube.com' in url or 'youtu.be' in url:
+                # Pour YouTube MP3: méthode vidéo + conversion (plus fiable)
+                self.logger.info("🔄 YouTube MP3 - Méthode vidéo + conversion")
+                result = self.download_video_and_convert_to_mp3(url, quality)
+                
+                # Si échec, tentative directe
+                if not result['success']:
+                    self.logger.info("🔄 Tentative de téléchargement MP3 direct...")
+                    result = self.download_direct_mp3(url, quality)
+                    
+                return result
+            else:
+                # Pour autres plateformes: tentative directe d'abord
+                self.logger.info("🔄 Autre plateforme - Tentative MP3 direct")
+                return self.download_direct_mp3(url, quality)
+        else:
+            # Pour les vidéos
+            return self.download_video(url)
+    
+    def download_video(self, url):
+        """Téléchargement vidéo standard"""
+        try:
+            video_opts = {
+                'format': 'best[height<=720]/best',
+                'outtmpl': os.path.join(str(self.output_dir), '%(title)s.%(ext)s'),
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                }
+            }
+            
+            with yt_dlp.YoutubeDL(video_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                title = self._sanitize_filename(info['title'])
+                ydl.download([url])
+                
+                return {
+                    'success': True,
+                    'title': title,
+                    'message': '✅ Vidéo téléchargée avec succès'
+                }
+                
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'message': '❌ Erreur lors du téléchargement vidéo'
+            }
+    
+    def cleanup(self):
+        """Nettoie les fichiers temporaires"""
+        try:
+            shutil.rmtree(self.temp_dir)
+            self.logger.info("🧹 Fichiers temporaires supprimés")
+        except:
+            pass
+    
+    def __del__(self):
+        """Destructeur - nettoie automatiquement"""
+        self.cleanup()
+
+
+# Fonction utilitaire pour utilisation simple
+def download_youtube_mp3(url, quality='320', output_dir="downloads"):
+    """
+    Fonction simple pour télécharger un MP3 depuis YouTube
+    
+    Args:
+        url: URL de la vidéo YouTube
+        quality: Qualité audio ('128', '192', '320')
+        output_dir: Dossier de sortie
+    
+    Returns:
+        dict: Résultat du téléchargement
+    """
+    downloader = SmartYouTubeDownloader(output_dir)
+    try:
+        return downloader.smart_download(url, 'mp3', quality)
+    finally:
+        downloader.cleanup()
+
+
+# Exemple d'utilisation
+if __name__ == "__main__":
+    # Test simple
+    url = input("Entrez l'URL YouTube: ")
+    
+    print("🎯 Début du téléchargement...")
+    result = download_youtube_mp3(url, quality='320')
+    
+    if result['success']:
+        print(f"✅ Succès: {result['message']}")
+        print(f"📁 Fichier: {result.get('file_path', 'downloads/')}")
+    else:
+        print(f"❌ Erreur: {result['message']}")
+        print(f"🔍 Détail: {result.get('error', 'Erreur inconnue')}")
