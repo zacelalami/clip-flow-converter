@@ -1,12 +1,13 @@
 
 import React, { useState, useRef, useCallback } from 'react';
-import { Download, Link, Music, Video, Upload, X, Clock } from 'lucide-react';
+import { Download, Link, Music, Video, Upload, X, Clock, User, Globe, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { motion } from 'framer-motion';
 
 interface DownloadFormProps {
   onDownload: (url: string, type: 'video' | 'audio', quality?: string) => Promise<void>;
