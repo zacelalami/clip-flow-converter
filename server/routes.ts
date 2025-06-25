@@ -108,21 +108,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cleanUrl = url.split('&list=')[0]; // Remove playlist parameter
       }
 
-      // Prepare platform-specific yt-dlp command with speed optimizations
+      // Simplified and reliable yt-dlp command
       let ytDlpCommand;
-      let baseOptions = "--no-check-certificate --no-playlist --max-filesize 120M --concurrent-fragments 4";
+      let baseOptions = "--no-check-certificate --no-playlist --max-filesize 100M";
       
-      // Platform-specific optimizations with production-safe settings
+      // Platform-specific optimizations - simplified for reliability
       if (detectedPlatform === 'youtube') {
-        baseOptions += " --extractor-retries 1 --fragment-retries 1 --retry-sleep linear=5::15 --sleep-requests 4 --sleep-interval 6 --max-sleep-interval 12 --force-ipv4 --geo-bypass --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36\"";
+        // YouTube is blocked, skip heavy processing
+        baseOptions += " --quiet --no-warnings";
       } else if (detectedPlatform === 'instagram') {
-        baseOptions += " --extractor-retries 3 --fragment-retries 3 --retry-sleep linear=1::3";
+        baseOptions += " --extractor-retries 5 --fragment-retries 5";
       } else if (detectedPlatform === 'tiktok') {
-        baseOptions += " --extractor-retries 3 --fragment-retries 3 --retry-sleep linear=1::3";
+        baseOptions += " --extractor-retries 5 --fragment-retries 5";
       } else if (detectedPlatform === 'facebook') {
-        baseOptions += " --extractor-retries 8 --fragment-retries 8 --retry-sleep exp=1:60 --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\"";
+        baseOptions += " --extractor-retries 8 --fragment-retries 8";
       } else {
-        baseOptions += " --extractor-retries 3 --fragment-retries 3 --retry-sleep linear=1::3";
+        baseOptions += " --extractor-retries 5 --fragment-retries 5";
       }
 
       if (type === "video") {
@@ -154,29 +155,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastError = error;
         console.log("Primary download failed, trying fallback strategies...", error.message);
         
-        // Strategy 2: Use specialized bypasses for YouTube and Facebook
+        // Strategy 2: Use specialized bypasses - but skip YouTube heavy processing
         if (detectedPlatform === 'youtube') {
-          console.log("YouTube primary failed, trying standard bypass...");
-          try {
-            downloadSuccess = await downloadYouTubeVideo(cleanUrl, type, quality, filepath);
-            if (downloadSuccess) {
-              console.log("YouTube standard bypass succeeded!");
-            }
-          } catch (bypassError) {
-            console.log("YouTube standard bypass failed, trying advanced strategies...");
-            lastError = bypassError;
-            
-            // Strategy 3: Advanced YouTube bypass with multiple techniques
-            try {
-              downloadSuccess = await downloadYouTubeAdvanced(cleanUrl, type, quality, filepath);
-              if (downloadSuccess) {
-                console.log("YouTube advanced bypass succeeded!");
-              }
-            } catch (advancedError) {
-              console.log("YouTube advanced bypass failed:", advancedError.message);
-              lastError = advancedError;
-            }
-          }
+          console.log("YouTube detected - skipping heavy bypass attempts (known to be blocked)");
+          lastError = new Error("YouTube anti-bot protection active");
         } else if (detectedPlatform === 'facebook') {
           console.log("Facebook primary failed, using specialized bypass...");
           try {
