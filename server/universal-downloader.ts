@@ -129,50 +129,63 @@ export class MediaDownloader {
     const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1];
     const cleanUrl = url.split('&list=')[0].split('&index=')[0]; // Remove playlist params
     
+    // User agents rotation for anti-bot evasion
+    const userAgents = [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1"
+    ];
+    
+    const randomUA = userAgents[Math.floor(Math.random() * userAgents.length)];
+    
     return [
       {
-        name: "YouTube Android Client",
+        name: "YouTube Advanced Bypass",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 15 --concurrent-fragments 4 --extractor-args "youtube:player_client=android" -f "18/mp4/worst" -o "${outputPath}" "${cleanUrl}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 45 --sleep-interval 1 --max-sleep-interval 3 --extractor-args "youtube:player_client=android,youtube:skip=dash,youtube:player_skip=configs" --no-check-certificate --ignore-errors --retries 3 -x --audio-format mp3 --audio-quality 128 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+          ? `yt-dlp ${baseOptions} --socket-timeout 20 --concurrent-fragments 4 --extractor-args "youtube:player_client=android,youtube:skip=dash,youtube:skip=hls" --user-agent "${randomUA}" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "Connection:keep-alive" -f "best[height<=720]/18/mp4/worst" -o "${outputPath}" "${cleanUrl}"`
+          : `yt-dlp ${baseOptions} --socket-timeout 45 --sleep-interval 2 --max-sleep-interval 4 --extractor-args "youtube:player_client=android,youtube:skip=dash,youtube:skip=hls,youtube:player_skip=configs" --user-agent "${randomUA}" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "Accept-Encoding:gzip, deflate" --add-header "Connection:keep-alive" --no-check-certificate --ignore-errors --retries 2 -x --audio-format mp3 --audio-quality 128 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
       },
       {
-        name: "YouTube Audio Stealth",
+        name: "YouTube Stealth Mode",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 15 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" -f "18/mp4" -o "${outputPath}" "${cleanUrl}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 30 --sleep-interval 2 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1" --add-header "Accept-Language:en-US,en;q=0.9" --no-check-certificate --ignore-errors -x --audio-format mp3 --audio-quality 96 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+          ? `yt-dlp ${baseOptions} --socket-timeout 20 --user-agent "${randomUA}" -f "18/mp4" -o "${outputPath}" "${cleanUrl}"`
+          : `yt-dlp ${baseOptions} --socket-timeout 40 --sleep-interval 3 --max-sleep-interval 5 --user-agent "${randomUA}" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "Accept-Encoding:gzip, deflate" --referer "https://www.google.com/" --no-check-certificate --ignore-errors -x --audio-format mp3 --audio-quality 96 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
       },
       {
-        name: "YouTube Audio Legacy",
+        name: "YouTube Embed Bypass",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 15 --extractor-args "youtube:player_client=web" -f "worst" -o "${outputPath}" "${cleanUrl}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 30 --sleep-interval 3 --extractor-args "youtube:player_client=web,youtube:skip=dash,youtube:player_skip=configs" --no-check-certificate --ignore-errors --legacy-server-connect -x --audio-format mp3 --audio-quality 64 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
-      },
-      {
-        name: "YouTube Audio Embed",
-        command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 15 --user-agent "Mozilla/5.0 (compatible; Googlebot/2.1)" -f "worst" -o "${outputPath}" "${cleanUrl}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 25 --user-agent "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" --referer "https://www.youtube.com/" --no-check-certificate --ignore-errors -x --audio-format mp3 --audio-quality 64 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${videoId ? `https://www.youtube.com/embed/${videoId}` : cleanUrl}"`
+          ? `yt-dlp ${baseOptions} --socket-timeout 20 --user-agent "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" -f "worst" -o "${outputPath}" "${cleanUrl}"`
+          : `yt-dlp ${baseOptions} --socket-timeout 35 --sleep-interval 4 --user-agent "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" --referer "https://www.youtube.com/" --no-check-certificate --ignore-errors -x --audio-format mp3 --audio-quality 64 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${videoId ? `https://www.youtube.com/embed/${videoId}` : cleanUrl}"`
       }
     ];
   }
 
   private static getInstagramStrategies(url: string, type: 'video' | 'audio', quality: string, outputPath: string, baseOptions: string) {
-    // Advanced Instagram bypass strategies
     const cleanUrl = url.replace(/\?.*$/, '').replace(/\/$/, '');
+    
+    // Instagram user agents rotation with rate limiting
+    const instagramUserAgents = [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1"
+    ];
+    
+    const randomUA = instagramUserAgents[Math.floor(Math.random() * instagramUserAgents.length)];
     
     return [
       {
-        name: "Instagram Stealth Mode",
+        name: "Instagram Rate-Limited Stealth",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 25 --sleep-interval 1 --max-sleep-interval 3 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1" --add-header "Accept-Language:en-US,en;q=0.9" --add-header "Accept-Encoding:gzip, deflate, br" --referer "https://www.instagram.com/" -f "mp4/worst" --no-check-certificate --ignore-errors -o "${outputPath}" "${cleanUrl}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 25 --sleep-interval 1 --max-sleep-interval 3 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --no-check-certificate --ignore-errors -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+          ? `sleep ${Math.floor(Math.random() * 3) + 2} && yt-dlp ${baseOptions} --socket-timeout 30 --sleep-interval 2 --max-sleep-interval 5 --user-agent "${randomUA}" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "Accept-Encoding:gzip, deflate" --add-header "Connection:keep-alive" --referer "https://www.instagram.com/" --no-check-certificate --ignore-errors -f "mp4/worst" -o "${outputPath}" "${cleanUrl}"`
+          : `sleep ${Math.floor(Math.random() * 3) + 2} && yt-dlp ${baseOptions} --socket-timeout 30 --sleep-interval 2 --max-sleep-interval 5 --user-agent "${randomUA}" --no-check-certificate --ignore-errors -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
       },
       {
-        name: "Instagram Proxy Mode",
+        name: "Instagram Desktop Simulation",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 30 --sleep-interval 2 --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" --add-header "Sec-Fetch-Dest:document" --add-header "Sec-Fetch-Mode:navigate" --no-check-certificate --ignore-errors -f "mp4" -o "${outputPath}" "${cleanUrl}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 30 --sleep-interval 2 --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" --no-check-certificate --ignore-errors -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+          ? `sleep ${Math.floor(Math.random() * 4) + 3} && yt-dlp ${baseOptions} --socket-timeout 35 --sleep-interval 3 --max-sleep-interval 6 --user-agent "${randomUA}" --add-header "Sec-Fetch-Dest:document" --add-header "Sec-Fetch-Mode:navigate" --add-header "Sec-Fetch-Site:none" --referer "https://www.google.com/" --no-check-certificate --ignore-errors -f "mp4" -o "${outputPath}" "${cleanUrl}"`
+          : `sleep ${Math.floor(Math.random() * 4) + 3} && yt-dlp ${baseOptions} --socket-timeout 35 --sleep-interval 3 --user-agent "${randomUA}" --no-check-certificate --ignore-errors -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
       }
     ];
   }
@@ -195,7 +208,6 @@ export class MediaDownloader {
   }
 
   private static getFacebookStrategies(url: string, type: 'video' | 'audio', quality: string, outputPath: string, baseOptions: string) {
-    // Advanced Facebook bypass with URL conversion
     let cleanUrl = url.replace(/\?.*$/, '').replace(/\/$/, '');
     
     // Convert various Facebook URL formats
@@ -204,24 +216,29 @@ export class MediaDownloader {
       if (videoId) {
         cleanUrl = `https://www.facebook.com/watch/?v=${videoId}`;
       }
-    } else if (cleanUrl.includes('/videos/')) {
-      // Keep videos URL as is
-    } else if (cleanUrl.includes('/reel/')) {
-      // Keep reel URL as is  
     }
+    
+    // Facebook user agents with rate limiting
+    const facebookUserAgents = [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1"
+    ];
+    
+    const randomUA = facebookUserAgents[Math.floor(Math.random() * facebookUserAgents.length)];
     
     return [
       {
-        name: "Facebook Stealth Browser",
+        name: "Facebook Rate-Limited Browser",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 30 --sleep-interval 2 --max-sleep-interval 5 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1" --add-header "Accept-Language:en-US,en;q=0.9" --add-header "Sec-Fetch-Site:none" --referer "https://www.facebook.com/" --no-check-certificate --ignore-errors -f "mp4/worst" -o "${outputPath}" "${cleanUrl}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 30 --sleep-interval 2 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --no-check-certificate --ignore-errors -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+          ? `sleep ${Math.floor(Math.random() * 4) + 2} && yt-dlp ${baseOptions} --socket-timeout 35 --sleep-interval 3 --max-sleep-interval 6 --user-agent "${randomUA}" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "Accept-Encoding:gzip, deflate" --add-header "Connection:keep-alive" --referer "https://www.facebook.com/" --no-check-certificate --ignore-errors -f "mp4/worst" -o "${outputPath}" "${cleanUrl}"`
+          : `sleep ${Math.floor(Math.random() * 4) + 2} && yt-dlp ${baseOptions} --socket-timeout 35 --sleep-interval 3 --user-agent "${randomUA}" --no-check-certificate --ignore-errors -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
       },
       {
-        name: "Facebook Graph API Emulation",
+        name: "Facebook Graph API Bypass",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 25 --user-agent "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)" --add-header "X-FB-Debug:1" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --no-check-certificate --ignore-errors -f "mp4" -o "${outputPath}" "${cleanUrl}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 25 --user-agent "facebookexternalhit/1.1" --no-check-certificate --ignore-errors -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+          ? `sleep ${Math.floor(Math.random() * 5) + 3} && yt-dlp ${baseOptions} --socket-timeout 30 --sleep-interval 4 --user-agent "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)" --add-header "X-FB-Debug:1" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --no-check-certificate --ignore-errors -f "mp4" -o "${outputPath}" "${cleanUrl}"`
+          : `sleep ${Math.floor(Math.random() * 5) + 3} && yt-dlp ${baseOptions} --socket-timeout 30 --user-agent "facebookexternalhit/1.1" --no-check-certificate --ignore-errors -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
       }
     ];
   }
