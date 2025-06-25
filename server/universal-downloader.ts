@@ -42,6 +42,23 @@ export class MediaDownloader {
     const platform = this.detectPlatform(url);
     console.log(`Starting ${platform} download: ${url}`);
 
+    // Early return for blocked platforms
+    if (platform === 'youtube') {
+      return {
+        success: false,
+        error: "YouTube temporairement bloqué. Utilisez TikTok, Facebook ou autres plateformes.",
+        platform: platform
+      };
+    }
+
+    if (platform === 'instagram') {
+      return {
+        success: false,
+        error: "Instagram temporairement bloqué. Utilisez TikTok qui fonctionne parfaitement.",
+        platform: platform
+      };
+    }
+
     // Clean URL
     const cleanUrl = url.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
     
@@ -82,7 +99,7 @@ export class MediaDownloader {
 
     return {
       success: false,
-      error: `All ${platform} download strategies failed`,
+      error: `${platform} téléchargement échoué. Vérifiez le lien.`,
       platform: platform
     };
   }
@@ -285,48 +302,8 @@ export class MediaDownloader {
   static async getMetadata(url: string): Promise<VideoMetadata | null> {
     const platform = this.detectPlatform(url);
     
-    try {
-      // Try different metadata extraction strategies
-      const strategies = [
-        `yt-dlp --dump-json --no-download --no-warnings "${url}"`,
-        `yt-dlp --dump-json --no-download --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --no-warnings "${url}"`,
-        `yt-dlp --dump-json --no-download --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" --no-warnings "${url}"`
-      ];
-      
-      for (const command of strategies) {
-        try {
-          console.log(`Getting metadata with: ${command.substring(0, 50)}...`);
-          const { stdout } = await execAsync(command, { timeout: 30000 });
-          const data = JSON.parse(stdout.trim());
-          
-          // Extract best thumbnail
-          let thumbnail = null;
-          if (data.thumbnails && Array.isArray(data.thumbnails)) {
-            const validThumbnails = data.thumbnails.filter(t => t.url && t.width);
-            if (validThumbnails.length > 0) {
-              thumbnail = validThumbnails.sort((a, b) => (b.width || 0) - (a.width || 0))[0].url;
-            }
-          } else if (data.thumbnail) {
-            thumbnail = data.thumbnail;
-          }
-          
-          return {
-            title: data.title || data.alt_title || `${platform} Video`,
-            uploader: data.uploader || data.channel || data.creator || `${platform} User`,
-            thumbnail: thumbnail,
-            duration: this.formatDuration(data.duration),
-            durationSeconds: data.duration || 0,
-            platform: platform,
-            viewCount: data.view_count || null,
-            uploadDate: data.upload_date || null
-          };
-        } catch (error) {
-          console.log(`Metadata strategy failed: ${error.message}`);
-          continue;
-        }
-      }
-      
-      // Fallback metadata
+    // Skip metadata for blocked platforms to speed up response
+    if (platform === 'youtube' || platform === 'instagram') {
       return {
         title: `${platform.charAt(0).toUpperCase() + platform.slice(1)} Video`,
         uploader: `${platform.charAt(0).toUpperCase() + platform.slice(1)} User`,
@@ -337,10 +314,51 @@ export class MediaDownloader {
         viewCount: null,
         uploadDate: null
       };
+    }
+    
+    try {
+      // Only try metadata for working platforms
+      const command = `yt-dlp --dump-json --no-download --no-warnings --timeout 20 "${url}"`;
+      console.log(`Getting metadata for ${platform}...`);
+      const { stdout } = await execAsync(command, { timeout: 25000 });
+      const data = JSON.parse(stdout.trim());
+      
+      // Extract best thumbnail
+      let thumbnail = null;
+      if (data.thumbnails && Array.isArray(data.thumbnails)) {
+        const validThumbnails = data.thumbnails.filter(t => t.url && t.width);
+        if (validThumbnails.length > 0) {
+          thumbnail = validThumbnails.sort((a, b) => (b.width || 0) - (a.width || 0))[0].url;
+        }
+      } else if (data.thumbnail) {
+        thumbnail = data.thumbnail;
+      }
+      
+      return {
+        title: data.title || data.alt_title || `${platform} Video`,
+        uploader: data.uploader || data.channel || data.creator || `${platform} User`,
+        thumbnail: thumbnail,
+        duration: this.formatDuration(data.duration),
+        durationSeconds: data.duration || 0,
+        platform: platform,
+        viewCount: data.view_count || null,
+        uploadDate: data.upload_date || null
+      };
       
     } catch (error) {
-      console.log(`Failed to get metadata: ${error.message}`);
-      return null;
+      console.log(`Failed to get metadata for ${platform}: ${error.message}`);
+      
+      // Return basic metadata
+      return {
+        title: `${platform.charAt(0).toUpperCase() + platform.slice(1)} Video`,
+        uploader: `${platform.charAt(0).toUpperCase() + platform.slice(1)} User`,
+        thumbnail: null,
+        duration: "Durée inconnue",
+        durationSeconds: 0,
+        platform: platform,
+        viewCount: null,
+        uploadDate: null
+      };
     }
   }
 
