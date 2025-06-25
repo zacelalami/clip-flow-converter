@@ -31,6 +31,11 @@ MediaSync is a full-stack web application that allows users to download videos a
 - Added concurrent fragment downloading (4 fragments) for faster speeds
 - Reduced retry delays and optimized platform-specific settings for speed
 - Enhanced filename cleaning to remove special characters properly
+- **June 25, 2025 - Early Morning**: Fixed production deployment issues
+- Adjusted YouTube settings for public deployment with anti-bot protection
+- Added production-safe delays and mobile user agents for stealth downloading
+- Updated UI messaging to inform users about YouTube restrictions in public mode
+- Optimized fallback strategies for better success rates on deployed sites
 
 ## Architecture
 

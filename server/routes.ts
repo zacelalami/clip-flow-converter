@@ -111,9 +111,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let ytDlpCommand;
       let baseOptions = "--no-check-certificate --no-playlist --max-filesize 120M --concurrent-fragments 4";
       
-      // Platform-specific optimizations with speed focus
+      // Platform-specific optimizations with production-safe settings
       if (detectedPlatform === 'youtube') {
-        baseOptions += " --extractor-retries 3 --fragment-retries 3 --retry-sleep linear=1::3 --force-ipv4 --geo-bypass --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36\"";
+        baseOptions += " --extractor-retries 2 --fragment-retries 2 --retry-sleep linear=3::10 --sleep-requests 2 --sleep-interval 3 --force-ipv4 --geo-bypass --user-agent \"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15\"";
       } else if (detectedPlatform === 'instagram') {
         baseOptions += " --extractor-retries 3 --fragment-retries 3 --retry-sleep linear=1::3";
       } else if (detectedPlatform === 'tiktok') {
@@ -273,7 +273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else if (error.message.includes("timeout") || error.message.includes("TIMEOUT")) {
           res.status(408).json({ error: "Délai d'attente dépassé. La vidéo est peut-être trop volumineuse." });
         } else if (error.message.includes("Sign in to confirm") || error.message.includes("bot")) {
-          res.status(429).json({ error: "Protection anti-bot YouTube activée. Essayez un autre lien ou réessayez dans quelques minutes." });
+          res.status(429).json({ error: "Protection anti-bot YouTube activée. En mode public, YouTube bloque temporairement les téléchargements. Utilisez Instagram, TikTok ou autres plateformes qui fonctionnent parfaitement." });
         } else {
           res.status(500).json({ error: "Échec du téléchargement. Cette vidéo pourrait être protégée ou indisponible." });
         }

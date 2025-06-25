@@ -14,22 +14,22 @@ export async function downloadYouTubeVideo(url: string, type: 'video' | 'audio',
   // Multiple fallback strategies for YouTube
   const strategies = [
     {
-      name: "Strategy 1: Fast download with concurrent fragments",
+      name: "Strategy 1: Production-safe with delays",
       command: type === 'video'
-        ? `yt-dlp --no-playlist --concurrent-fragments 4 --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" -f "best[height<=${quality.replace('p', '')}]/best" --max-filesize 120M -o "${outputPath}" "${cleanUrl}"`
-        : `yt-dlp --no-playlist --concurrent-fragments 4 --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" -x --audio-format mp3 --audio-quality ${quality.replace('kbps', '')} --max-filesize 80M -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+        ? `yt-dlp --no-playlist --sleep-requests 3 --sleep-interval 5 --max-sleep-interval 15 --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" -f "worst[height<=${quality.replace('p', '')}]/worst" --max-filesize 80M -o "${outputPath}" "${cleanUrl}"`
+        : `yt-dlp --no-playlist --sleep-requests 3 --sleep-interval 5 --max-sleep-interval 15 --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" -x --audio-format mp3 --audio-quality ${quality.replace('kbps', '')} --max-filesize 60M -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
     },
     {
-      name: "Strategy 2: Alternative user agent with speed optimization",
+      name: "Strategy 2: Mobile user agent bypass",
       command: type === 'video'
-        ? `yt-dlp --no-playlist --concurrent-fragments 3 --user-agent "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15" -f "18/mp4/worst" --max-filesize 80M -o "${outputPath}" "${cleanUrl}"`
-        : `yt-dlp --no-playlist --concurrent-fragments 3 --user-agent "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15" -x --audio-format mp3 --audio-quality 128 --max-filesize 60M -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+        ? `yt-dlp --no-playlist --sleep-requests 2 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" -f "18/mp4/worst" --max-filesize 60M -o "${outputPath}" "${cleanUrl}"`
+        : `yt-dlp --no-playlist --sleep-requests 2 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" -x --audio-format mp3 --audio-quality 128 --max-filesize 40M -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
     },
     {
-      name: "Strategy 3: Minimal fast approach",
+      name: "Strategy 3: Minimal stealth approach",
       command: type === 'video'
-        ? `yt-dlp --no-playlist --quiet --no-warnings --concurrent-fragments 2 -f "worst/best" --max-filesize 60M -o "${outputPath}" "${cleanUrl}"`
-        : `yt-dlp --no-playlist --quiet --no-warnings --concurrent-fragments 2 -x --audio-format mp3 --audio-quality 96 --max-filesize 40M -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+        ? `yt-dlp --no-playlist --quiet --no-warnings --sleep-requests 4 -f "worst" --max-filesize 40M -o "${outputPath}" "${cleanUrl}"`
+        : `yt-dlp --no-playlist --quiet --no-warnings --sleep-requests 4 -x --audio-format mp3 --audio-quality 96 --max-filesize 30M -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
     }
   ];
 
