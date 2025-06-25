@@ -118,7 +118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // YouTube is blocked, skip heavy processing
         baseOptions += " --quiet --no-warnings";
       } else if (detectedPlatform === 'instagram') {
-        baseOptions += " --extractor-retries 5 --fragment-retries 5";
+        baseOptions += " --extractor-retries 8 --fragment-retries 8 --user-agent \"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15\"";
       } else if (detectedPlatform === 'tiktok') {
         baseOptions += " --extractor-retries 5 --fragment-retries 5";
       } else if (detectedPlatform === 'facebook') {
