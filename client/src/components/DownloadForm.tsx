@@ -162,6 +162,23 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
     try {
       const quality = downloadType === 'video' ? videoQuality : audioQuality;
       await onDownload(url, downloadType, quality);
+      
+      // Clear all fields after successful download
+      setUrl('');
+      setDetectedPlatform(null);
+      setDetectedContentType(null);
+      setVideoInfo(null);
+      setIsLoadingInfo(false);
+      
+      toast({
+        title: "Téléchargement réussi",
+        description: "Le fichier a été téléchargé avec succès",
+      });
+      
+      // Focus input for next URL
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 500);
     } catch (error) {
       console.error('Download failed:', error);
     } finally {
