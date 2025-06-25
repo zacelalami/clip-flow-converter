@@ -6,12 +6,8 @@ import { promisify } from "util";
 import path from "path";
 import fs from "fs";
 import Anthropic from "@anthropic-ai/sdk";
-import { downloadYouTubeVideo, getYouTubeInfo } from "./youtube-bypass";
-import { downloadYouTubeAdvanced } from "./youtube-advanced";
-import { downloadYouTubeUltimate } from "./youtube-ultimate";
+import { UniversalDownloader } from "./downloader-core";
 import { getVideoInfo } from "./platform-info";
-import { downloadFacebookVideo } from "./facebook-bypass";
-import { createYouTubeDemo } from "./youtube-demo";
 
 const execAsync = promisify(exec);
 
