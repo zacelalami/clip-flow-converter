@@ -7,6 +7,7 @@ import path from "path";
 import fs from "fs";
 import Anthropic from "@anthropic-ai/sdk";
 import { downloadYouTubeVideo, getYouTubeInfo } from "./youtube-bypass";
+import { downloadYouTubeAdvanced } from "./youtube-advanced";
 import { getVideoInfo } from "./platform-info";
 import { downloadFacebookVideo } from "./facebook-bypass";
 
@@ -113,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Platform-specific optimizations with production-safe settings
       if (detectedPlatform === 'youtube') {
-        baseOptions += " --extractor-retries 2 --fragment-retries 2 --retry-sleep linear=3::10 --sleep-requests 2 --sleep-interval 3 --force-ipv4 --geo-bypass --user-agent \"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15\"";
+        baseOptions += " --extractor-retries 1 --fragment-retries 1 --retry-sleep linear=5::15 --sleep-requests 4 --sleep-interval 6 --max-sleep-interval 12 --force-ipv4 --geo-bypass --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36\"";
       } else if (detectedPlatform === 'instagram') {
         baseOptions += " --extractor-retries 3 --fragment-retries 3 --retry-sleep linear=1::3";
       } else if (detectedPlatform === 'tiktok') {
@@ -155,15 +156,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Strategy 2: Use specialized bypasses for YouTube and Facebook
         if (detectedPlatform === 'youtube') {
-          console.log("YouTube primary failed, using specialized bypass...");
+          console.log("YouTube primary failed, trying standard bypass...");
           try {
             downloadSuccess = await downloadYouTubeVideo(cleanUrl, type, quality, filepath);
             if (downloadSuccess) {
-              console.log("YouTube bypass succeeded!");
+              console.log("YouTube standard bypass succeeded!");
             }
           } catch (bypassError) {
-            console.log("YouTube bypass failed:", bypassError.message);
+            console.log("YouTube standard bypass failed, trying advanced strategies...");
             lastError = bypassError;
+            
+            // Strategy 3: Advanced YouTube bypass with multiple techniques
+            try {
+              downloadSuccess = await downloadYouTubeAdvanced(cleanUrl, type, quality, filepath);
+              if (downloadSuccess) {
+                console.log("YouTube advanced bypass succeeded!");
+              }
+            } catch (advancedError) {
+              console.log("YouTube advanced bypass failed:", advancedError.message);
+              lastError = advancedError;
+            }
           }
         } else if (detectedPlatform === 'facebook') {
           console.log("Facebook primary failed, using specialized bypass...");
