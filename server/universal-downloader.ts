@@ -24,8 +24,8 @@ export interface VideoMetadata {
 }
 
 export class MediaDownloader {
-  private static readonly TIMEOUT = 180000; // 3 minutes
-  private static readonly MAX_FILESIZE = 150; // MB
+  private static readonly TIMEOUT = 120000; // 2 minutes
+  private static readonly MAX_FILESIZE = 100; // MB
 
   static detectPlatform(url: string): string {
     const lowerUrl = url.toLowerCase();
@@ -42,22 +42,7 @@ export class MediaDownloader {
     const platform = this.detectPlatform(url);
     console.log(`Starting ${platform} download: ${url}`);
 
-    // Early return for blocked platforms
-    if (platform === 'youtube') {
-      return {
-        success: false,
-        error: "YouTube temporairement bloqué. Utilisez TikTok, Facebook ou autres plateformes.",
-        platform: platform
-      };
-    }
-
-    if (platform === 'instagram') {
-      return {
-        success: false,
-        error: "Instagram temporairement bloqué. Utilisez TikTok qui fonctionne parfaitement.",
-        platform: platform
-      };
-    }
+    // Remove early returns - we'll attempt downloads for all platforms
 
     // Clean URL
     const cleanUrl = url.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
@@ -127,26 +112,26 @@ export class MediaDownloader {
 
   private static getYouTubeStrategies(url: string, type: 'video' | 'audio', quality: string, outputPath: string, baseOptions: string) {
     const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1];
-    const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+    const cleanUrl = url.split('&list=')[0].split('&index=')[0]; // Remove playlist params
     
     return [
       {
-        name: "YouTube Mobile User Agent",
+        name: "YouTube Simple Mobile",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" -f "worst[height<=720]" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" -x --audio-format mp3 --audio-quality 128 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+          ? `yt-dlp ${baseOptions} --socket-timeout 30 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" -f "18/mp4/worst" -o "${outputPath}" "${cleanUrl}"`
+          : `yt-dlp ${baseOptions} --socket-timeout 30 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" -x --audio-format mp3 --audio-quality 128 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
       },
       {
-        name: "YouTube Embed",
+        name: "YouTube Web Client",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -f "18/worst" -o "${outputPath}" "${embedUrl}"`
-          : `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -x --audio-format mp3 --audio-quality 96 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${embedUrl}"`
+          ? `yt-dlp ${baseOptions} --socket-timeout 30 --extractor-args "youtube:player_client=web" -f "worst" -o "${outputPath}" "${cleanUrl}"`
+          : `yt-dlp ${baseOptions} --socket-timeout 30 --extractor-args "youtube:player_client=web" -x --audio-format mp3 --audio-quality 96 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
       },
       {
-        name: "YouTube Legacy",
+        name: "YouTube Android",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --legacy-server-connect -f "17/18/36" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --legacy-server-connect -x --audio-format mp3 --audio-quality 64 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+          ? `yt-dlp ${baseOptions} --socket-timeout 30 --extractor-args "youtube:player_client=android" -f "17/18/36" -o "${outputPath}" "${cleanUrl}"`
+          : `yt-dlp ${baseOptions} --socket-timeout 30 --extractor-args "youtube:player_client=android" -x --audio-format mp3 --audio-quality 64 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
       }
     ];
   }
@@ -154,22 +139,22 @@ export class MediaDownloader {
   private static getInstagramStrategies(url: string, type: 'video' | 'audio', quality: string, outputPath: string, baseOptions: string) {
     return [
       {
-        name: "Instagram Mobile Bypass",
+        name: "Instagram Browser Cookies",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --cookies-from-browser chrome --extractor-retries 3 -f "best[height<=720]" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --cookies-from-browser chrome --extractor-retries 3 -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+          ? `yt-dlp ${baseOptions} --cookies-from-browser firefox --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --extractor-retries 5 -f "best[height<=720]/mp4" -o "${outputPath}" "${url}"`
+          : `yt-dlp ${baseOptions} --cookies-from-browser firefox --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --extractor-retries 5 -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
       },
       {
-        name: "Instagram Alternative",
+        name: "Instagram Mobile App Simulation",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (Android 12; Mobile; rv:68.0) Gecko/68.0 Firefox/122.0" --add-header "Accept-Language:en-US,en;q=0.9" -f "mp4" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (Android 12; Mobile; rv:68.0) Gecko/68.0 Firefox/122.0" --add-header "Accept-Language:en-US,en;q=0.9" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+          ? `yt-dlp ${baseOptions} --user-agent "Instagram 302.0.0.27.103 Android" --add-header "X-IG-App-ID:936619743392459" -f "mp4" -o "${outputPath}" "${url}"`
+          : `yt-dlp ${baseOptions} --user-agent "Instagram 302.0.0.27.103 Android" --add-header "X-IG-App-ID:936619743392459" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
       },
       {
-        name: "Instagram Simple",
+        name: "Instagram Chrome Extension Bypass",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --ignore-errors --no-check-certificate -f "worst" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --ignore-errors --no-check-certificate -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+          ? `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" --add-header "Sec-Fetch-Site:same-origin" --referer "https://www.instagram.com/" -f "worst" -o "${outputPath}" "${url}"`
+          : `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" --add-header "Sec-Fetch-Site:same-origin" --referer "https://www.instagram.com/" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
       }
     ];
   }
@@ -194,10 +179,22 @@ export class MediaDownloader {
   private static getFacebookStrategies(url: string, type: 'video' | 'audio', quality: string, outputPath: string, baseOptions: string) {
     return [
       {
-        name: "Facebook Standard",
+        name: "Facebook Browser Cookies",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" --extractor-retries 8 -f "best[height<=720]" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" --extractor-retries 8 -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+          ? `yt-dlp ${baseOptions} --cookies-from-browser chrome --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" --extractor-retries 8 -f "best[height<=720]/mp4" -o "${outputPath}" "${url}"`
+          : `yt-dlp ${baseOptions} --cookies-from-browser chrome --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" --extractor-retries 8 -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+      },
+      {
+        name: "Facebook Mobile Bypass",
+        command: type === 'video'
+          ? `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --add-header "Accept-Language:en-US,en;q=0.9" -f "mp4" -o "${outputPath}" "${url}"`
+          : `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --add-header "Accept-Language:en-US,en;q=0.9" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+      },
+      {
+        name: "Facebook Graph API Simulation",
+        command: type === 'video'
+          ? `yt-dlp ${baseOptions} --user-agent "facebookexternalhit/1.1" --add-header "X-FB-Debug:1" -f "worst" -o "${outputPath}" "${url}"`
+          : `yt-dlp ${baseOptions} --user-agent "facebookexternalhit/1.1" --add-header "X-FB-Debug:1" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
       }
     ];
   }
@@ -302,23 +299,11 @@ export class MediaDownloader {
   static async getMetadata(url: string): Promise<VideoMetadata | null> {
     const platform = this.detectPlatform(url);
     
-    // Skip metadata for blocked platforms to speed up response
-    if (platform === 'youtube' || platform === 'instagram') {
-      return {
-        title: `${platform.charAt(0).toUpperCase() + platform.slice(1)} Video`,
-        uploader: `${platform.charAt(0).toUpperCase() + platform.slice(1)} User`,
-        thumbnail: null,
-        duration: "Durée inconnue",
-        durationSeconds: 0,
-        platform: platform,
-        viewCount: null,
-        uploadDate: null
-      };
-    }
+    // Try to get metadata for all platforms now
     
     try {
       // Only try metadata for working platforms
-      const command = `yt-dlp --dump-json --no-download --no-warnings --timeout 20 "${url}"`;
+      const command = `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 20 "${url}"`;
       console.log(`Getting metadata for ${platform}...`);
       const { stdout } = await execAsync(command, { timeout: 25000 });
       const data = JSON.parse(stdout.trim());
