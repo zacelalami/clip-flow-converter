@@ -24,7 +24,7 @@ export interface VideoMetadata {
 }
 
 export class MediaDownloader {
-  private static readonly TIMEOUT = 120000; // 2 minutes
+  private static readonly TIMEOUT = 60000; // 1 minute
   private static readonly MAX_FILESIZE = 100; // MB
 
   static detectPlatform(url: string): string {
@@ -116,22 +116,10 @@ export class MediaDownloader {
     
     return [
       {
-        name: "YouTube Simple Mobile",
+        name: "YouTube Android Client",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 30 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" -f "18/mp4/worst" -o "${outputPath}" "${cleanUrl}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 30 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" -x --audio-format mp3 --audio-quality 128 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
-      },
-      {
-        name: "YouTube Web Client",
-        command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 30 --extractor-args "youtube:player_client=web" -f "worst" -o "${outputPath}" "${cleanUrl}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 30 --extractor-args "youtube:player_client=web" -x --audio-format mp3 --audio-quality 96 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
-      },
-      {
-        name: "YouTube Android",
-        command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 30 --extractor-args "youtube:player_client=android" -f "17/18/36" -o "${outputPath}" "${cleanUrl}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 30 --extractor-args "youtube:player_client=android" -x --audio-format mp3 --audio-quality 64 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+          ? `yt-dlp ${baseOptions} --socket-timeout 15 --concurrent-fragments 4 --extractor-args "youtube:player_client=android" -f "18/mp4/worst" -o "${outputPath}" "${cleanUrl}"`
+          : `yt-dlp ${baseOptions} --socket-timeout 15 --concurrent-fragments 4 --extractor-args "youtube:player_client=android" -x --audio-format mp3 --audio-quality 192 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
       }
     ];
   }
@@ -139,22 +127,16 @@ export class MediaDownloader {
   private static getInstagramStrategies(url: string, type: 'video' | 'audio', quality: string, outputPath: string, baseOptions: string) {
     return [
       {
-        name: "Instagram Browser Cookies",
+        name: "Instagram Fast Mobile",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --cookies-from-browser firefox --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --extractor-retries 5 -f "best[height<=720]/mp4" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --cookies-from-browser firefox --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --extractor-retries 5 -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+          ? `yt-dlp ${baseOptions} --socket-timeout 15 --concurrent-fragments 4 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" -f "mp4/worst" -o "${outputPath}" "${url}"`
+          : `yt-dlp ${baseOptions} --socket-timeout 15 --concurrent-fragments 4 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
       },
       {
-        name: "Instagram Mobile App Simulation",
+        name: "Instagram Android App",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --user-agent "Instagram 302.0.0.27.103 Android" --add-header "X-IG-App-ID:936619743392459" -f "mp4" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --user-agent "Instagram 302.0.0.27.103 Android" --add-header "X-IG-App-ID:936619743392459" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
-      },
-      {
-        name: "Instagram Chrome Extension Bypass",
-        command: type === 'video'
-          ? `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" --add-header "Sec-Fetch-Site:same-origin" --referer "https://www.instagram.com/" -f "worst" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" --add-header "Sec-Fetch-Site:same-origin" --referer "https://www.instagram.com/" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+          ? `yt-dlp ${baseOptions} --socket-timeout 15 --user-agent "Instagram 302.0.0.27.103 Android" --add-header "X-IG-App-ID:936619743392459" -f "mp4" -o "${outputPath}" "${url}"`
+          : `yt-dlp ${baseOptions} --socket-timeout 15 --user-agent "Instagram 302.0.0.27.103 Android" --add-header "X-IG-App-ID:936619743392459" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
       }
     ];
   }
@@ -179,22 +161,16 @@ export class MediaDownloader {
   private static getFacebookStrategies(url: string, type: 'video' | 'audio', quality: string, outputPath: string, baseOptions: string) {
     return [
       {
-        name: "Facebook Browser Cookies",
+        name: "Facebook Fast Mobile",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --cookies-from-browser chrome --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" --extractor-retries 8 -f "best[height<=720]/mp4" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --cookies-from-browser chrome --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" --extractor-retries 8 -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+          ? `yt-dlp ${baseOptions} --socket-timeout 15 --concurrent-fragments 4 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" -f "mp4/worst" -o "${outputPath}" "${url}"`
+          : `yt-dlp ${baseOptions} --socket-timeout 15 --concurrent-fragments 4 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
       },
       {
-        name: "Facebook Mobile Bypass",
+        name: "Facebook Graph API",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --add-header "Accept-Language:en-US,en;q=0.9" -f "mp4" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --add-header "Accept-Language:en-US,en;q=0.9" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
-      },
-      {
-        name: "Facebook Graph API Simulation",
-        command: type === 'video'
-          ? `yt-dlp ${baseOptions} --user-agent "facebookexternalhit/1.1" --add-header "X-FB-Debug:1" -f "worst" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --user-agent "facebookexternalhit/1.1" --add-header "X-FB-Debug:1" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+          ? `yt-dlp ${baseOptions} --socket-timeout 15 --user-agent "facebookexternalhit/1.1" --add-header "X-FB-Debug:1" -f "worst" -o "${outputPath}" "${url}"`
+          : `yt-dlp ${baseOptions} --socket-timeout 15 --user-agent "facebookexternalhit/1.1" --add-header "X-FB-Debug:1" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
       }
     ];
   }
@@ -302,32 +278,61 @@ export class MediaDownloader {
     // Try to get metadata for all platforms now
     
     try {
-      // Only try metadata for working platforms
-      const command = `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 20 "${url}"`;
-      console.log(`Getting metadata for ${platform}...`);
-      const { stdout } = await execAsync(command, { timeout: 25000 });
-      const data = JSON.parse(stdout.trim());
+      // Fast metadata extraction using the same strategies that work for downloads
+      const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1];
+      const cleanUrl = url.split('&list=')[0].split('&index=')[0];
       
-      // Extract best thumbnail
-      let thumbnail = null;
-      if (data.thumbnails && Array.isArray(data.thumbnails)) {
-        const validThumbnails = data.thumbnails.filter(t => t.url && t.width);
-        if (validThumbnails.length > 0) {
-          thumbnail = validThumbnails.sort((a, b) => (b.width || 0) - (a.width || 0))[0].url;
+      const strategies = [
+        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 8 --extractor-args "youtube:player_client=android" "${cleanUrl}"`,
+        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 8 --concurrent-fragments 2 --extractor-args "youtube:player_client=android" "${cleanUrl}"`,
+        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 10 --user-agent "Mozilla/5.0 (Android 12; Mobile; rv:68.0) Gecko/68.0 Firefox/122.0" "${cleanUrl}"`
+      ];
+      
+      for (const command of strategies) {
+        try {
+          console.log(`Getting metadata for ${platform} (fast strategy)...`);
+          const { stdout } = await execAsync(command, { timeout: 12000 });
+          const data = JSON.parse(stdout.trim());
+          
+          // Extract best thumbnail
+          let thumbnail = null;
+          if (data.thumbnails && Array.isArray(data.thumbnails)) {
+            const validThumbnails = data.thumbnails.filter(t => t.url && t.width);
+            if (validThumbnails.length > 0) {
+              // Get medium quality thumbnail for faster loading
+              const mediumThumbnail = validThumbnails.find(t => t.width >= 320 && t.width <= 640);
+              thumbnail = mediumThumbnail ? mediumThumbnail.url : validThumbnails[0].url;
+            }
+          } else if (data.thumbnail) {
+            thumbnail = data.thumbnail;
+          }
+          
+          return {
+            title: data.title || data.alt_title || `${platform} Video`,
+            uploader: data.uploader || data.channel || data.creator || `${platform} User`,
+            thumbnail: thumbnail,
+            duration: this.formatDuration(data.duration),
+            durationSeconds: data.duration || 0,
+            platform: platform,
+            viewCount: data.view_count || null,
+            uploadDate: data.upload_date || null
+          };
+        } catch (strategyError) {
+          console.log(`Metadata strategy failed: ${strategyError.message}`);
+          continue;
         }
-      } else if (data.thumbnail) {
-        thumbnail = data.thumbnail;
       }
       
+      // Fallback if all strategies fail
       return {
-        title: data.title || data.alt_title || `${platform} Video`,
-        uploader: data.uploader || data.channel || data.creator || `${platform} User`,
-        thumbnail: thumbnail,
-        duration: this.formatDuration(data.duration),
-        durationSeconds: data.duration || 0,
+        title: `${platform.charAt(0).toUpperCase() + platform.slice(1)} Video`,
+        uploader: `${platform.charAt(0).toUpperCase() + platform.slice(1)} User`,
+        thumbnail: null,
+        duration: "Durée inconnue",
+        durationSeconds: 0,
         platform: platform,
-        viewCount: data.view_count || null,
-        uploadDate: data.upload_date || null
+        viewCount: null,
+        uploadDate: null
       };
       
     } catch (error) {
