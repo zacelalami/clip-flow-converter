@@ -103,13 +103,16 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
     setUrl(value);
     setDetectedPlatform(detectPlatform(value));
     
-    // Debounce video info fetching
+    // Clear video info immediately when URL is empty
+    if (!value.trim()) {
+      setVideoInfo(null);
+      setIsLoadingInfo(false);
+      return;
+    }
+    
+    // Debounce video info fetching for non-empty URLs
     const timeoutId = setTimeout(() => {
-      if (value.trim()) {
-        fetchVideoInfo(value);
-      } else {
-        setVideoInfo(null);
-      }
+      fetchVideoInfo(value);
     }, 1000);
 
     return () => clearTimeout(timeoutId);
@@ -261,6 +264,8 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
                   setUrl('');
                   setDetectedPlatform(null);
                   setDetectedContentType(null);
+                  setVideoInfo(null);
+                  setIsLoadingInfo(false);
                 }}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
