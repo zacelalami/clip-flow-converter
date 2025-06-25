@@ -8,6 +8,7 @@ import fs from "fs";
 import Anthropic from "@anthropic-ai/sdk";
 import { downloadYouTubeVideo, getYouTubeInfo } from "./youtube-bypass";
 import { downloadYouTubeAdvanced } from "./youtube-advanced";
+import { downloadYouTubeUltimate } from "./youtube-ultimate";
 import { getVideoInfo } from "./platform-info";
 import { downloadFacebookVideo } from "./facebook-bypass";
 import { createYouTubeDemo } from "./youtube-demo";
@@ -158,18 +159,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Strategy 2: Use specialized bypasses 
         if (detectedPlatform === 'youtube') {
-          console.log("YouTube detected - creating demo file due to anti-bot protection");
+          console.log("YouTube primary failed, trying standard bypass...");
           try {
-            const videoId = cleanUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1];
-            if (videoId) {
-              downloadSuccess = await createYouTubeDemo(videoId, filepath, type);
+            downloadSuccess = await downloadYouTubeVideo(cleanUrl, type, quality, filepath);
+            if (downloadSuccess) {
+              console.log("YouTube standard bypass succeeded!");
+            }
+          } catch (bypassError) {
+            console.log("YouTube standard bypass failed, trying advanced strategies...");
+            lastError = bypassError;
+            
+            // Strategy 3: Advanced YouTube bypass
+            try {
+              downloadSuccess = await downloadYouTubeAdvanced(cleanUrl, type, quality, filepath);
               if (downloadSuccess) {
-                console.log("YouTube demo file created successfully!");
+                console.log("YouTube advanced bypass succeeded!");
+              }
+            } catch (advancedError) {
+              console.log("YouTube advanced bypass failed, trying ULTIMATE strategies...");
+              lastError = advancedError;
+              
+              // Strategy 4: Ultimate YouTube bypass
+              try {
+                downloadSuccess = await downloadYouTubeUltimate(cleanUrl, type, quality, filepath);
+                if (downloadSuccess) {
+                  console.log("YouTube ULTIMATE bypass succeeded!");
+                }
+              } catch (ultimateError) {
+                console.log("All YouTube real download attempts failed, creating demo...");
+                lastError = ultimateError;
+                
+                // Fallback to demo only if everything else fails
+                try {
+                  const videoId = cleanUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1];
+                  if (videoId) {
+                    downloadSuccess = await createYouTubeDemo(videoId, filepath, type);
+                    if (downloadSuccess) {
+                      console.log("YouTube demo file created as last resort");
+                    }
+                  }
+                } catch (demoError) {
+                  console.log("Even demo creation failed:", demoError.message);
+                  lastError = demoError;
+                }
               }
             }
-          } catch (demoError) {
-            console.log("YouTube demo creation failed:", demoError.message);
-            lastError = demoError;
           }
         } else if (detectedPlatform === 'facebook') {
           console.log("Facebook primary failed, using specialized bypass...");
