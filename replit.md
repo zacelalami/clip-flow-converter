@@ -52,6 +52,11 @@ MediaSync is a full-stack web application that allows users to download videos a
 - Enhanced UI with emoji fallbacks and improved error handling
 - Better thumbnail quality selection per platform with preference handling
 - Fixed thumbnail loading issues with proper fallback mechanisms
+- **June 25, 2025 - SMART UX IMPROVEMENTS**: Enhanced user experience features
+- Auto-focus cursor in paste link field for immediate use
+- Auto-clear URL after successful download with cursor repositioning
+- Fixed thumbnail persistence bug when URL is deleted
+- Smart workflow: paste → download → auto-clear → ready for next URL
 
 ## Architecture
 

@@ -37,6 +37,7 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const detectPlatform = (url: string) => {
@@ -249,11 +250,13 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
           <div className="relative">
             <Link className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
             <Input
+              ref={inputRef}
               type="url"
               placeholder="Paste any video URL here (Instagram Reels, TikTok, YouTube, etc.) or drag and drop..."
               value={url}
               onChange={(e) => handleUrlChange(e.target.value)}
               className="pl-12 pr-12 h-14 text-lg rounded-2xl border-2 transition-all duration-300 focus:ring-2 focus:ring-primary/20"
+              autoFocus
             />
             {url && (
               <Button
@@ -266,6 +269,10 @@ const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
                   setDetectedContentType(null);
                   setVideoInfo(null);
                   setIsLoadingInfo(false);
+                  // Focus the input field after clearing
+                  setTimeout(() => {
+                    inputRef.current?.focus();
+                  }, 100);
                 }}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
