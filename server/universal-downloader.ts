@@ -137,16 +137,22 @@ export class MediaDownloader {
   private static getInstagramStrategies(url: string, type: 'video' | 'audio', quality: string, outputPath: string, baseOptions: string) {
     return [
       {
-        name: "Instagram Mobile",
+        name: "Instagram Mobile Bypass",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --extractor-retries 5 -f "best[height<=720]" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --extractor-retries 5 -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+          ? `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --cookies-from-browser chrome --extractor-retries 3 -f "best[height<=720]" -o "${outputPath}" "${url}"`
+          : `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --cookies-from-browser chrome --extractor-retries 3 -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
       },
       {
-        name: "Instagram Desktop",
+        name: "Instagram Alternative",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" --referer "https://www.instagram.com/" -f "mp4" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" --referer "https://www.instagram.com/" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+          ? `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (Android 12; Mobile; rv:68.0) Gecko/68.0 Firefox/122.0" --add-header "Accept-Language:en-US,en;q=0.9" -f "mp4" -o "${outputPath}" "${url}"`
+          : `yt-dlp ${baseOptions} --user-agent "Mozilla/5.0 (Android 12; Mobile; rv:68.0) Gecko/68.0 Firefox/122.0" --add-header "Accept-Language:en-US,en;q=0.9" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+      },
+      {
+        name: "Instagram Simple",
+        command: type === 'video'
+          ? `yt-dlp ${baseOptions} --ignore-errors --no-check-certificate -f "worst" -o "${outputPath}" "${url}"`
+          : `yt-dlp ${baseOptions} --ignore-errors --no-check-certificate -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
       }
     ];
   }

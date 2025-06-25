@@ -32,16 +32,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Download request: ${platform} - ${cleanUrl}`);
       
-      // Generate safe filename
+      // Generate safe ASCII filename
       let filename;
       try {
         const metadata = await MediaDownloader.getMetadata(cleanUrl);
         if (metadata && metadata.title) {
           const cleanTitle = metadata.title
-            .replace(/[<>:"/\\|?*]/g, '')
+            .replace(/[^\w\s-]/g, '') // Remove all non-ASCII characters including emojis
             .replace(/\s+/g, '_')
-            .substring(0, 80);
-          filename = `${cleanTitle}_${Date.now()}`;
+            .replace(/_{2,}/g, '_') // Replace multiple underscores with single
+            .substring(0, 50);
+          filename = cleanTitle ? `${cleanTitle}_${Date.now()}` : `${platform}_${type}_${Date.now()}`;
         } else {
           filename = `${platform}_${type}_${Date.now()}`;
         }
@@ -61,10 +62,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`Download completed successfully in ${downloadTime}ms: ${result.filepath} (${stats.size} bytes)`);
         
-        const filename = path.basename(result.filepath);
-        console.log(`Sending file with name: ${filename}`);
+        const safeFilename = path.basename(result.filepath)
+          .replace(/[^\w\s.-]/g, '') // Remove non-ASCII characters
+          .replace(/\s+/g, '_');
+        console.log(`Sending file with name: ${safeFilename}`);
         
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
         res.setHeader('Content-Type', type === 'video' ? 'video/mp4' : 'audio/mpeg');
         res.setHeader('Content-Length', stats.size.toString());
         
@@ -98,6 +101,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(429).json({ error: "Protection anti-bot activée. Essayez dans quelques minutes." });
       } else if (error.message.includes("private") || error.message.includes("unavailable")) {
         res.status(404).json({ error: "Vidéo non disponible ou privée." });
+      } else if (error.message.includes("rate-limit") || error.message.includes("login required")) {
+        res.status(429).json({ error: "Plateforme temporairement bloquée. Essayez TikTok ou YouTube qui fonctionnent." });
       } else {
         res.status(500).json({ error: "Échec du téléchargement. Vérifiez le lien et réessayez." });
       }
