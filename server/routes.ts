@@ -133,8 +133,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Basic health check endpoint  
-  app.get("/", (req, res) => {
+  // Basic health check endpoint for API
+  app.get("/api", (req, res) => {
     res.json({ message: "MediaSync API is running", version: "2.0.0" });
   });
 
