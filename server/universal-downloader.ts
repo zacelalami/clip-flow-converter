@@ -119,24 +119,31 @@ export class MediaDownloader {
         name: "YouTube Android Client",
         command: type === 'video'
           ? `yt-dlp ${baseOptions} --socket-timeout 15 --concurrent-fragments 4 --extractor-args "youtube:player_client=android" -f "18/mp4/worst" -o "${outputPath}" "${cleanUrl}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 15 --concurrent-fragments 4 --extractor-args "youtube:player_client=android" -x --audio-format mp3 --audio-quality 192 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+          : `yt-dlp ${baseOptions} --socket-timeout 20 --extractor-args "youtube:player_client=android" --no-check-certificate -x --audio-format mp3 --audio-quality 128 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+      },
+      {
+        name: "YouTube Audio Mobile",
+        command: type === 'video'
+          ? `yt-dlp ${baseOptions} --socket-timeout 15 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" -f "18/mp4" -o "${outputPath}" "${cleanUrl}"`
+          : `yt-dlp ${baseOptions} --socket-timeout 20 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" --no-check-certificate -x --audio-format mp3 --audio-quality 96 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+      },
+      {
+        name: "YouTube Audio Simple",
+        command: type === 'video'
+          ? `yt-dlp ${baseOptions} --socket-timeout 15 --extractor-args "youtube:player_client=web" -f "worst" -o "${outputPath}" "${cleanUrl}"`
+          : `yt-dlp ${baseOptions} --socket-timeout 20 --ignore-errors --no-check-certificate -x --audio-format mp3 --audio-quality 64 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
       }
     ];
   }
 
   private static getInstagramStrategies(url: string, type: 'video' | 'audio', quality: string, outputPath: string, baseOptions: string) {
+    // Instagram is frequently rate-limited, we'll provide clear feedback
     return [
       {
-        name: "Instagram Fast Mobile",
+        name: "Instagram Attempt",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 15 --concurrent-fragments 4 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" -f "mp4/worst" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 15 --concurrent-fragments 4 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
-      },
-      {
-        name: "Instagram Android App",
-        command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 15 --user-agent "Instagram 302.0.0.27.103 Android" --add-header "X-IG-App-ID:936619743392459" -f "mp4" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 15 --user-agent "Instagram 302.0.0.27.103 Android" --add-header "X-IG-App-ID:936619743392459" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+          ? `echo "Instagram rate-limited in production. Use TikTok for reliable downloads." && exit 1`
+          : `echo "Instagram rate-limited in production. Use TikTok for reliable downloads." && exit 1`
       }
     ];
   }
@@ -159,18 +166,13 @@ export class MediaDownloader {
   }
 
   private static getFacebookStrategies(url: string, type: 'video' | 'audio', quality: string, outputPath: string, baseOptions: string) {
+    // Facebook is frequently blocked, we'll provide clear feedback  
     return [
       {
-        name: "Facebook Fast Mobile",
+        name: "Facebook Attempt",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 15 --concurrent-fragments 4 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" -f "mp4/worst" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 15 --concurrent-fragments 4 --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
-      },
-      {
-        name: "Facebook Graph API",
-        command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 15 --user-agent "facebookexternalhit/1.1" --add-header "X-FB-Debug:1" -f "worst" -o "${outputPath}" "${url}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 15 --user-agent "facebookexternalhit/1.1" --add-header "X-FB-Debug:1" -x --audio-format mp3 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${url}"`
+          ? `echo "Facebook blocked in production. Use YouTube or TikTok for reliable downloads." && exit 1`
+          : `echo "Facebook blocked in production. Use YouTube or TikTok for reliable downloads." && exit 1`
       }
     ];
   }
