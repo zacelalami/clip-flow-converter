@@ -42,7 +42,11 @@ export class MediaDownloader {
     const platform = this.detectPlatform(url);
     console.log(`Starting ${platform} download: ${url}`);
 
-    // Remove early returns - we'll attempt downloads for all platforms
+    // CRITICAL: YouTube audio must use video-to-MP3 conversion
+    if (platform === 'youtube' && type === 'audio') {
+      console.log("🔄 YouTube MP3 request - Routing to video-to-MP3 conversion...");
+      return this.downloadYouTubeVideoAndConvertToMp3(url, outputPath, quality);
+    }
 
     // Clean URL
     const cleanUrl = url.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
@@ -82,17 +86,23 @@ export class MediaDownloader {
       }
     }
 
-    // Last resort: provide helpful information for blocked platforms
-    if (platform === 'instagram' || platform === 'facebook') {
+    // Enhanced error handling with specific messages
+    if (platform === 'instagram') {
       return {
         success: false,
-        error: `${platform.charAt(0).toUpperCase() + platform.slice(1)} bloqué en production. Alternative: utilisez YouTube (vidéo+métadonnées) ou TikTok (stable). Pour ${platform}, essayez en local ou utilisez un VPN.`,
+        error: "Instagram bloqué par protections anti-bot en production. Tentez avec un VPN ou en mode développement local. Alternative fonctionnelle: YouTube (vidéo+audio) et TikTok.",
+        platform: platform
+      };
+    } else if (platform === 'facebook') {
+      return {
+        success: false,
+        error: "Facebook bloqué par détection anti-bot sophistiquée. Recommandation: utilisez YouTube ou TikTok qui fonctionnent parfaitement. Facebook nécessite un environnement local ou VPN.",
         platform: platform
       };
     } else if (platform === 'youtube' && type === 'audio') {
       return {
         success: false,
-        error: "YouTube audio difficile en production due aux protections anti-bot. Alternative: téléchargez la vidéo et extrayez l'audio localement.",
+        error: "ERREUR: YouTube audio devrait utiliser la conversion automatique. Vérifiez le routage dans le code.",
         platform: platform
       };
     }
@@ -347,9 +357,16 @@ export class MediaDownloader {
     
     try {
       // Step 1: Download YouTube video (this works perfectly)
-      console.log("📹 Downloading YouTube video...");
+      console.log("📹 Downloading YouTube video for MP3 conversion...");
+      const userAgents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      ];
+      const randomUA = userAgents[Math.floor(Math.random() * userAgents.length)];
+      
       const baseOptions = '--no-check-certificate --no-playlist --max-filesize 100M --no-warnings';
-      const videoCommand = `yt-dlp ${baseOptions} --socket-timeout 20 --concurrent-fragments 4 --extractor-args "youtube:player_client=android,youtube:skip=dash,youtube:skip=hls" -f "best[height<=720]/18/mp4/worst" -o "${tempVideoPath}" "${cleanUrl}"`;
+      const videoCommand = `yt-dlp ${baseOptions} --socket-timeout 25 --concurrent-fragments 4 --user-agent "${randomUA}" --extractor-args "youtube:player_client=android,youtube:skip=dash,youtube:skip=hls" -f "best[height<=720]/18/mp4/worst" -o "${tempVideoPath}" "${cleanUrl}"`;
       
       await this.executeCommand(videoCommand);
       

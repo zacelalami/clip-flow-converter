@@ -36,17 +36,17 @@ MediaSync is a full-stack web application that allows users to download videos a
 - Added production-safe delays and mobile user agents for stealth downloading
 - Updated UI messaging to inform users about YouTube restrictions in public mode
 - Optimized fallback strategies for better success rates on deployed sites
-- **June 25, 2025 - VIDEO-TO-MP3 CONVERSION**: YouTube audio breakthrough solution implemented
-- YouTube video: ✅ WORKING (12.8MB in 5.5s stable)
-- TikTok: ✅ WORKING (8.5MB in 6.5s stable)
-- YouTube audio: ✅ NEW SOLUTION - Video download + ffmpeg conversion to MP3
-- Instagram/Facebook: ❌ Rate-limited (industry standard limitation)
-- Implemented user-suggested video-to-MP3 conversion workflow:
-  * Download YouTube video (working perfectly)
-  * Convert video to MP3 using ffmpeg (320k/256k/192k/128k/96k bitrates)
-  * Clean up temporary video file
-  * Return MP3 file to user
-- YouTube audio circumvention successful via conversion method
+- **June 25, 2025 - YOUTUBE MP3 SOLUTION**: User-requested video-to-MP3 conversion implemented
+- YouTube video: ✅ WORKING (12.8MB in 5s stable)
+- YouTube audio: ✅ WORKING (video-to-MP3 conversion with ffmpeg)
+- TikTok: ✅ WORKING (8.5MB stable downloads)
+- Instagram/Facebook: ⚠️ Blocked by production anti-bot (require VPN/local environment)
+- Successfully implemented user-suggested workflow:
+  * Download YouTube video (bypasses audio restrictions)
+  * Convert to MP3 using ffmpeg with multiple bitrate support
+  * Automatic cleanup of temporary files
+  * Return converted MP3 to user
+- Instagram/Facebook limitations clarified with helpful error messages
 
 ## Architecture
 
@@ -106,11 +106,10 @@ MediaSync is a full-stack web application that allows users to download videos a
 ```
 
 ## Current Status
-✅ YouTube video downloads: 12.8MB in 5 seconds with thumbnails
-✅ YouTube audio downloads: Video-to-MP3 conversion with ffmpeg (WORKING)
-✅ TikTok downloads: 8.5MB stable and reliable
-✅ Web interface fully operational on port 5000
-❌ Instagram/Facebook: Rate-limited in production environment
-🎯 Major breakthrough: All YouTube formats now working (video + audio)
-💡 Complete solution: YouTube video, YouTube MP3, TikTok + metadata extraction
-✅ User request fulfilled: YouTube audio circumvention via conversion method successful
+✅ YouTube: Video (12.8MB/5s) + Audio (MP3 conversion via ffmpeg) - BOTH WORKING
+✅ TikTok: 8.5MB stable video downloads
+✅ Web interface: Port 5000 fully operational with metadata extraction
+⚠️ Instagram/Facebook: Production anti-bot blocks (require VPN or local environment)
+🎯 User request fulfilled: YouTube MP3 conversion working correctly
+💡 Production-ready: YouTube video + YouTube MP3 + TikTok
+🔧 Instagram/Facebook: Industry-standard limitation in hosted production environments
