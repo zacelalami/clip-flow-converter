@@ -57,6 +57,12 @@ MediaSync is a full-stack web application that allows users to download videos a
 - Auto-clear URL after successful download with cursor repositioning
 - Fixed thumbnail persistence bug when URL is deleted
 - Smart workflow: paste → download → auto-clear → ready for next URL
+- **June 25, 2025 - ADVANCED YT-DLP STRATEGIES**: Implemented sophisticated anti-bot bypass techniques
+- Cookie-based authentication using Chrome/Firefox browser cookies
+- Multiple client types: Android, iOS, mobile, desktop rotation
+- Enhanced header spoofing with browser-like requests
+- Embed URL fallbacks and Googlebot user agent simulation
+- 5-tier fallback system for maximum success rate against YouTube restrictions
 
 ## Architecture
 

@@ -139,34 +139,47 @@ export class MediaDownloader {
     const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1];
     const cleanUrl = url.split('&list=')[0].split('&index=')[0]; // Remove playlist params
     
-    // User agents rotation for anti-bot evasion
+    // Enhanced user agents rotation for better anti-bot evasion
     const userAgents = [
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
       "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1"
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
     ];
     
     const randomUA = userAgents[Math.floor(Math.random() * userAgents.length)];
+    const mobileUA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
     
     return [
       {
-        name: "YouTube Advanced Bypass",
+        name: "YouTube Cookie-Based Chrome Android",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 20 --concurrent-fragments 4 --extractor-args "youtube:player_client=android,youtube:skip=dash,youtube:skip=hls" --user-agent "${randomUA}" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "Connection:keep-alive" -f "best[height<=720]/18/mp4/worst" -o "${outputPath}" "${cleanUrl}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 45 --sleep-interval 2 --max-sleep-interval 4 --extractor-args "youtube:player_client=android,youtube:skip=dash,youtube:skip=hls,youtube:player_skip=configs" --user-agent "${randomUA}" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "Accept-Encoding:gzip, deflate" --add-header "Connection:keep-alive" --no-check-certificate --ignore-errors --retries 2 -x --audio-format mp3 --audio-quality 128 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+          ? `yt-dlp --cookies-from-browser chrome ${baseOptions} --socket-timeout 20 --concurrent-fragments 4 --extractor-args "youtube:player_client=android,youtube:skip=dash,youtube:skip=hls" --user-agent "${randomUA}" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "Connection:keep-alive" --add-header "Upgrade-Insecure-Requests:1" -f "best[height<=720]/18/mp4/worst" -o "${outputPath}" "${cleanUrl}"`
+          : `yt-dlp --cookies-from-browser chrome ${baseOptions} --socket-timeout 45 --sleep-interval 2 --max-sleep-interval 4 --extractor-args "youtube:player_client=android,youtube:skip=dash,youtube:skip=hls" --user-agent "${randomUA}" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "Connection:keep-alive" --no-check-certificate --ignore-errors --retries 2 -x --audio-format mp3 --audio-quality 128 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
       },
       {
-        name: "YouTube Stealth Mode",
+        name: "YouTube Firefox Mobile Client",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 20 --user-agent "${randomUA}" -f "18/mp4" -o "${outputPath}" "${cleanUrl}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 40 --sleep-interval 3 --max-sleep-interval 5 --user-agent "${randomUA}" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "Accept-Encoding:gzip, deflate" --referer "https://www.google.com/" --no-check-certificate --ignore-errors -x --audio-format mp3 --audio-quality 96 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+          ? `yt-dlp --cookies-from-browser firefox ${baseOptions} --socket-timeout 20 --extractor-args "youtube:player_client=android" --user-agent "${mobileUA}" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" -f "best[height<=720]/18/mp4/worst" -o "${outputPath}" "${cleanUrl}"`
+          : `yt-dlp --cookies-from-browser firefox ${baseOptions} --socket-timeout 40 --sleep-interval 3 --max-sleep-interval 5 --extractor-args "youtube:player_client=android" --user-agent "${mobileUA}" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --no-check-certificate --ignore-errors -x --audio-format mp3 --audio-quality 96 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
       },
       {
-        name: "YouTube Embed Bypass",
+        name: "YouTube iOS Client Bypass",
         command: type === 'video'
-          ? `yt-dlp ${baseOptions} --socket-timeout 20 --user-agent "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" -f "worst" -o "${outputPath}" "${cleanUrl}"`
-          : `yt-dlp ${baseOptions} --socket-timeout 35 --sleep-interval 4 --user-agent "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" --referer "https://www.youtube.com/" --no-check-certificate --ignore-errors -x --audio-format mp3 --audio-quality 64 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${videoId ? `https://www.youtube.com/embed/${videoId}` : cleanUrl}"`
+          ? `yt-dlp ${baseOptions} --socket-timeout 25 --extractor-args "youtube:player_client=ios,youtube:skip=dash" --user-agent "${mobileUA}" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "DNT:1" -f "best[height<=720]/18/mp4/worst" -o "${outputPath}" "${cleanUrl}"`
+          : `yt-dlp ${baseOptions} --socket-timeout 35 --sleep-interval 4 --extractor-args "youtube:player_client=ios,youtube:skip=dash" --user-agent "${mobileUA}" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "DNT:1" --no-check-certificate --ignore-errors -x --audio-format mp3 --audio-quality 64 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
+      },
+      {
+        name: "YouTube Googlebot Embed",
+        command: type === 'video'
+          ? `yt-dlp ${baseOptions} --socket-timeout 30 --user-agent "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" -f "worst" -o "${outputPath}" "${cleanUrl.replace('watch?v=', 'embed/')}"`
+          : `yt-dlp ${baseOptions} --socket-timeout 30 --user-agent "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --no-check-certificate --ignore-errors -x --audio-format mp3 --audio-quality 64 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl.replace('watch?v=', 'embed/')}"`
+      },
+      {
+        name: "YouTube Delayed Fallback",
+        command: type === 'video'
+          ? `sleep 2 && yt-dlp ${baseOptions} --socket-timeout 15 --user-agent "${randomUA}" --add-header "Referer:https://www.google.com/" -f "18/mp4" -o "${outputPath}" "${cleanUrl}"`
+          : `sleep 2 && yt-dlp ${baseOptions} --socket-timeout 25 --user-agent "${randomUA}" --add-header "Referer:https://www.google.com/" --no-check-certificate --ignore-errors -x --audio-format mp3 --audio-quality 96 -o "${outputPath.replace('.mp3', '.%(ext)s')}" "${cleanUrl}"`
       }
     ];
   }
@@ -465,9 +478,24 @@ export class MediaDownloader {
     // Platform-specific metadata extraction strategies
     if (platform === 'youtube') {
       const cleanUrl = url.split('&list=')[0].split('&index=')[0];
+      const mobileUA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
+      
+      // Enhanced YouTube metadata strategies with cookie-based authentication
       strategies = [
-        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 8 --extractor-args "youtube:player_client=android" "${cleanUrl}"`,
-        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 10 --user-agent "${randomUA}" "${cleanUrl}"`
+        // Strategy 1: Cookie-based with Android client (most effective)
+        `yt-dlp --cookies-from-browser chrome --dump-json --no-download --no-warnings --socket-timeout 20 --extractor-args "youtube:player_client=android,youtube:skip=dash,youtube:skip=hls" --user-agent "${randomUA}" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "Connection:keep-alive" --add-header "Upgrade-Insecure-Requests:1" "${cleanUrl}"`,
+        
+        // Strategy 2: Firefox cookies with mobile client
+        `yt-dlp --cookies-from-browser firefox --dump-json --no-download --no-warnings --socket-timeout 20 --extractor-args "youtube:player_client=android" --user-agent "${mobileUA}" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" "${cleanUrl}"`,
+        
+        // Strategy 3: iOS client bypass (no cookies)
+        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 25 --extractor-args "youtube:player_client=ios,youtube:skip=dash" --user-agent "${mobileUA}" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "DNT:1" "${cleanUrl}"`,
+        
+        // Strategy 4: Googlebot with embed URL (last resort)
+        `yt-dlp --dump-json --no-download --no-warnings --socket-timeout 30 --user-agent "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" "${cleanUrl.replace('watch?v=', 'embed/')}"`,
+        
+        // Strategy 5: Basic fallback with random delay
+        `sleep 2 && yt-dlp --dump-json --no-download --no-warnings --socket-timeout 15 --user-agent "${randomUA}" --add-header "Referer:https://www.google.com/" "${cleanUrl}"`
       ];
     } else if (platform === 'tiktok') {
       strategies = [

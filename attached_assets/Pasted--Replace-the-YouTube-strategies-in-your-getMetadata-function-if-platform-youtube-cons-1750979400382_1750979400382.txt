@@ -1,0 +1,23 @@
+// Replace the YouTube strategies in your getMetadata function
+
+if (platform === 'youtube') {
+  const cleanUrl = url.split('&list=')[0].split('&index=')[0];
+  
+  // Enhanced strategies with multiple anti-bot techniques
+  strategies = [
+    // Strategy 1: Cookie-based with Android client (most effective)
+    ⁠ yt-dlp --cookies-from-browser chrome --dump-json --no-download --no-warnings --socket-timeout 20 --extractor-args "youtube:player_client=android,youtube:skip=dash,youtube:skip=hls" --user-agent "${randomUA}" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "Connection:keep-alive" --add-header "Upgrade-Insecure-Requests:1" "${cleanUrl}" ⁠,
+    
+    // Strategy 2: Firefox cookies with mobile client
+    ⁠ yt-dlp --cookies-from-browser firefox --dump-json --no-download --no-warnings --socket-timeout 20 --extractor-args "youtube:player_client=android" --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" "${cleanUrl}" ⁠,
+    
+    // Strategy 3: iOS client bypass (no cookies)
+    ⁠ yt-dlp --dump-json --no-download --no-warnings --socket-timeout 25 --extractor-args "youtube:player_client=ios,youtube:skip=dash" --user-agent "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" --add-header "Accept-Language:en-US,en;q=0.5" --add-header "DNT:1" "${cleanUrl}" ⁠,
+    
+    // Strategy 4: Googlebot with embed URL (last resort)
+    ⁠ yt-dlp --dump-json --no-download --no-warnings --socket-timeout 30 --user-agent "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" --add-header "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" "${cleanUrl.replace('watch?v=', 'embed/')}" ⁠,
+    
+    // Strategy 5: Basic fallback with random delay
+    ⁠ sleep 2 && yt-dlp --dump-json --no-download --no-warnings --socket-timeout 15 --user-agent "${randomUA}" --add-header "Referer:https://www.google.com/" "${cleanUrl}" ⁠
+  ];
+}
